@@ -1,4 +1,4 @@
-const CACHE = "meteoro-portal-v3";
+const CACHE = "meteoro-portal-v4";
 const ASSETS = [
   "/portal/",
   "/portal/styles.css",
@@ -54,8 +54,13 @@ self.addEventListener("fetch", (event) => {
   const isPublicApi = url.pathname.startsWith("/api/v1/public");
   if (!isPortal && !isPublicApi) return;
 
+  // cache:"no-cache" força revalidação no servidor (ETag) — sem isso o cache
+  // HTTP do navegador pode servir assets velhos mesmo com estratégia network-first.
+  const networkRequest = isPortal
+    ? new Request(event.request, { cache: "no-cache" })
+    : event.request;
   event.respondWith(
-    fetch(event.request)
+    fetch(networkRequest)
       .then((response) => {
         if (response.ok) {
           if (isPublicApi) {
