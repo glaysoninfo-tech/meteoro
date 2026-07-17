@@ -23,11 +23,17 @@
 .daily-brief a{color:#b9f1ea}
 .daily-brief ul{margin:.5rem 0;padding-left:1.2rem;color:#e8f7f5}
 
-/* Botões de orientação */
-.guidance-buttons{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
-.guidance-buttons button{padding:10px 16px;border:1px solid #b7d6cf;border-radius:9px;background:#fff;font:inherit;font-weight:700;color:#075c67;cursor:pointer}
-.guidance-buttons button:hover{background:#e8f3f0}
-.guidance-buttons button[aria-busy="true"]{opacity:.6;cursor:progress}
+/* Orientações por tema (cartões topic-banner estilizados no guidance.css) */
+.guidance-topics{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0}
+.topic-banner{font:inherit;cursor:pointer}
+.topic-banner[aria-busy="true"]{opacity:.6;cursor:progress}
+.topic-banner>span:first-child{font-size:1.4rem}
+
+/* Mapa público da Situação agora */
+#public-map{height:340px;border-radius:12px;border:1px solid #d9ebe6}
+
+/* Destaque do painel de destino ao navegar por atalho */
+.anchor-flash{outline:3px solid #f59e0b;outline-offset:4px;border-radius:8px;transition:outline-color .4s}
 
 /* Links de dados abertos */
 .open-data-links article a{word-break:break-all}

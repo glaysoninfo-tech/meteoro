@@ -56,7 +56,11 @@ function renderOperationalRoute(active) {
   const route = operationalRoutes.find(([id]) => id === active) || operationalRoutes[0];
   activeOperationalRoute = route[0];
   byId("operational-tabs").innerHTML = operationalRoutes.map(([id, label]) => `<a href="#operacao/${id}" aria-current="${id === route[0] ? "page" : "false"}">${label}</a>`).join("");
-  byId("operational-route-summary").innerHTML = `<p class="eyebrow">${escapeHtml(route[1])}</p><h3>${escapeHtml(route[2])}</h3><div class="module-pills">${route[3].map((name) => `<a href="#operacao/${route[0]}/${portalSlug(name)}">${escapeHtml(name)}</a>`).join("")}</div>`;
+  byId("operational-route-summary").innerHTML = `<p class="eyebrow">${escapeHtml(route[1])}</p><h3>${escapeHtml(route[2])}</h3><div class="module-pills">${route[3].map((name) => {
+    const target = MODULE_TARGETS[portalSlug(name)];
+    const href = target ? `#operacao/${target[0]}/${target[1]}` : `#operacao/${route[0]}/${portalSlug(name)}`;
+    return `<a href="${href}">${escapeHtml(name)}</a>`;
+  }).join("")}</div>`;
   document.querySelectorAll("[data-operational-group]").forEach((panel) => { panel.hidden = !operationalToken || panel.dataset.operationalGroup !== route[0]; });
   byId("module-workspace").innerHTML = route[3].map((name) => `<article id="${portalSlug(name)}"><h3>${escapeHtml(name)}</h3><p>${moduleDescription(name)}</p>${moduleActionMarkup(name)}</article>`).join("");
 }
@@ -68,7 +72,13 @@ function syncPortalRoute() {
   document.querySelector("footer").hidden = !institutional;
   if (parts[0] === "operacao") {
     renderOperationalRoute(parts[1] || "visao-geral");
-    if (parts[2]) requestAnimationFrame(() => document.getElementById(parts[2])?.scrollIntoView({block:"center"}));
+    if (parts[2]) requestAnimationFrame(() => {
+      const alvo = document.getElementById(parts[2]);
+      if (!alvo) return;
+      alvo.scrollIntoView({block:"center"});
+      alvo.classList.add("anchor-flash");
+      setTimeout(() => alvo.classList.remove("anchor-flash"), 1800);
+    });
   } else {
     const route = publicRoutes.some(([id]) => id === parts[1]) ? parts[1] : "situacao";
     renderPublicTabs(route);

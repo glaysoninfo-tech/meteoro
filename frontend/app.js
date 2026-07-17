@@ -209,16 +209,64 @@ window.addEventListener("hashchange", () => {
   if (location.hash.includes("operacao/monitoramento")) {
     setTimeout(() => { municipalMap?.invalidateSize({pan:false, animate:false}); resizeAviationMap(); }, 160);
   }
+  if (location.hash.includes("public/situacao")) {
+    setTimeout(() => publicMap?.invalidateSize({pan:false, animate:false}), 160);
+  }
 });
+
+// Mapa público (Situação agora): territórios publicados + alertas vigentes.
+let publicMap = null;
+let publicMapLayers = [];
+async function loadPublicMap() {
+  const host = byId("public-map");
+  if (!host || !window.L) return;
+  try {
+    const [territories, alerts] = await Promise.all([
+      request("/public/territories"),
+      request("/public/alerts"),
+    ]);
+    if (!publicMap) {
+      publicMap = L.map("public-map", {scrollWheelZoom:false}).setView([-19.9676, -44.1983], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, attribution:"© OpenStreetMap contributors"}).addTo(publicMap);
+    }
+    publicMapLayers.forEach((layer) => publicMap.removeLayer(layer));
+    publicMapLayers = [];
+    const alertedCodes = new Set(alerts.flatMap((a) => a.territory_codes || []));
+    territories.forEach((territory) => {
+      const emAlerta = alertedCodes.has(territory.territory_code);
+      const layer = L.geoJSON(territory.geometry_geojson, {
+        style: {color: emAlerta ? "#dc2626" : "#0f766e", weight: 2, fillOpacity: emAlerta ? 0.18 : 0.06},
+      }).bindPopup(`<strong>${escapeHtml(territory.territory_name)}</strong><br>${escapeHtml(territory.territory_type)}${emAlerta ? "<br><strong>⚠ Alerta oficial vigente</strong>" : ""}`).addTo(publicMap);
+      publicMapLayers.push(layer);
+    });
+    if (publicMapLayers.length) {
+      const bounds = L.featureGroup(publicMapLayers).getBounds();
+      if (bounds.isValid()) publicMap.fitBounds(bounds, {padding:[24,24], maxZoom:13});
+    }
+    requestAnimationFrame(() => publicMap.invalidateSize({pan:false, animate:false}));
+    setTimeout(() => publicMap?.invalidateSize({pan:false, animate:false}), 200);
+    byId("public-map-state").textContent = alertedCodes.size
+      ? "Áreas em vermelho possuem alerta oficial vigente — toque para detalhes."
+      : "Sem alertas vigentes nas áreas publicadas. Toque em uma área para detalhes.";
+  } catch (error) { byId("public-map-state").textContent = error.message; }
+}
+window.addEventListener("load", loadPublicMap);
 
 // Painéis públicos: Território e Proteção.
 async function loadPublicTerritories() {
   const state = byId("public-territories-state");
   if (!state) return;
   try {
-    const territories = await request("/public/territories");
+    const [territories, alerts] = await Promise.all([
+      request("/public/territories"),
+      request("/public/alerts"),
+    ]);
+    const alertedCodes = new Set(alerts.flatMap((a) => a.territory_codes || []));
     byId("public-territories").innerHTML = territories.length
-      ? territories.map((t) => `<article><h3>${escapeHtml(t.territory_name)}</h3><p>${escapeHtml(t.territory_type)}</p></article>`).join("")
+      ? territories.map((t) => {
+          const emAlerta = alertedCodes.has(t.territory_code);
+          return `<article><h3>${escapeHtml(t.territory_name)}${emAlerta ? " ⚠" : ""}</h3><p>${escapeHtml(t.territory_type)}</p><p>${emAlerta ? "<strong>Alerta oficial vigente nesta área.</strong>" : "Sem alerta vigente."}</p><p><a href="#public/situacao">Ver no mapa da cidade</a></p></article>`;
+        }).join("")
       : "<p class='muted'>Nenhum território publicado até o momento.</p>";
     state.textContent = `${territories.length} território(s) com publicação ativa.`;
   } catch (error) { state.textContent = error.message; }
@@ -384,6 +432,7 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 setInterval(() => {
   loadPublic();
+  loadPublicMap();
   loadPublicTerritories();
   loadPublicRecommendations();
   if (typeof loadCurrentConditions === "function") loadCurrentConditions();
