@@ -38,7 +38,7 @@ def test_metrics_reporta_staleness_de_fonte(client: TestClient) -> None:
     assert created.status_code == 201, created.text
     corpo = client.get("/metrics").text
     # Fonte nunca coletada aparece com o marcador específico e criticidade.
-    assert 'meteoro_source_never_collected{source_name="Fonte Métrica",criticality="high"}' in corpo
+    assert 'meteoro_source_never_collected{source_name="Fonte Métrica",criticality="high",access_method="http"}' in corpo
 
 
 def test_metrics_contabiliza_status_http(client: TestClient) -> None:

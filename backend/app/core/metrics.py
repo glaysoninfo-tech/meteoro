@@ -66,7 +66,8 @@ def render_metrics(db: Session) -> str:
     for source in sources:
         labels = (
             f'source_name="{_escape(source.source_name)}",'
-            f'criticality="{_escape(source.criticality)}"'
+            f'criticality="{_escape(source.criticality)}",'
+            f'access_method="{_escape(source.access_method)}"'
         )
         if source.last_success_at is None:
             lines.append(f"meteoro_source_never_collected{{{labels}}} 1")
