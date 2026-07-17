@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     auth_mode: str = "local"
     jwt_secret_key: str = INSECURE_JWT_DEFAULT
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_hours: int = 8
     keycloak_issuer_url: str | None = None
     keycloak_jwks_url: str | None = None
     keycloak_audience: str | None = None

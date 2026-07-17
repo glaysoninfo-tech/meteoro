@@ -41,6 +41,31 @@ class UserModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class RefreshTokenModel(Base):
+    """Sessão de longa duração do operador (rotativa e revogável).
+
+    Apenas o hash SHA-256 do token é persistido; o valor bruto vive
+    exclusivamente no cookie httpOnly do navegador do operador.
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    token_id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.user_id"), nullable=False
+    )
+    organization_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("organizations.organization_id"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    replaced_by_token_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
 class RoleModel(Base):
     __tablename__ = "roles"
 

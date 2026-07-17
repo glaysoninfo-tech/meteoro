@@ -1,10 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.settings import settings
 from app.core.security import create_access_token
 from app.db.session import get_db
 from app.modules.audit.service import audit_service
+from app.modules.identity.refresh import (
+    REFRESH_COOKIE_NAME,
+    REFRESH_COOKIE_PATH,
+    RefreshTokenError,
+    issue_refresh_token,
+    revoke_refresh_token,
+    rotate_refresh_token,
+)
 from app.modules.identity.dependencies import can_access_organization, get_current_user, require_roles
 from app.modules.identity.schemas import (
     BootstrapAdminRequest,
@@ -17,6 +25,18 @@ from app.modules.identity.schemas import (
 from app.modules.identity.service import identity_service
 
 router = APIRouter()
+
+
+def _set_refresh_cookie(response: Response, raw_token: str) -> None:
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=raw_token,
+        max_age=settings.refresh_token_expire_hours * 3600,
+        path=REFRESH_COOKIE_PATH,
+        httponly=True,
+        samesite="strict",
+        secure=settings.environment.strip().lower() == "production",
+    )
 
 
 @router.post(
@@ -62,7 +82,11 @@ def bootstrap_admin(payload: BootstrapAdminRequest, db: Session = Depends(get_db
 
 
 @router.post("/token", response_model=TokenResponse)
-def create_token(payload: TokenRequest, db: Session = Depends(get_db)) -> TokenResponse:
+def create_token(
+    payload: TokenRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
     if settings.auth_mode == "keycloak":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -95,7 +119,59 @@ def create_token(payload: TokenRequest, db: Session = Depends(get_db)) -> TokenR
         resource_type="user",
         resource_id=user.user_id,
     )
+    _set_refresh_cookie(response, issue_refresh_token(db, user))
     return TokenResponse(access_token=access_token, expires_at_utc=expires_at)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_session(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    """Renova a sessão a partir do cookie httpOnly, com rotação do token."""
+    if settings.auth_mode == "keycloak":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Renovação local desabilitada: autentique via Keycloak.",
+        )
+    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nenhuma sessão ativa para renovar.",
+        )
+    try:
+        new_raw, user = rotate_refresh_token(db, raw_token)
+    except RefreshTokenError as exc:
+        response.delete_cookie(REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
+
+    roles = identity_service.get_active_roles(
+        db=db,
+        user_id=user.user_id,
+        organization_id=user.organization_id,
+    )
+    access_token, expires_at = create_access_token(
+        user_id=user.user_id,
+        organization_id=user.organization_id,
+        roles=roles,
+    )
+    _set_refresh_cookie(response, new_raw)
+    return TokenResponse(access_token=access_token, expires_at_utc=expires_at)
+
+
+@router.post("/logout")
+def logout(request: Request, response: Response, db: Session = Depends(get_db)) -> dict[str, str]:
+    """Revoga a sessão atual e limpa o cookie (idempotente)."""
+    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if raw_token:
+        revoke_refresh_token(db, raw_token)
+    response.delete_cookie(REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+    return {"detail": "Sessão encerrada."}
 
 
 @router.get("/me", response_model=CurrentUser)

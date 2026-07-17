@@ -248,13 +248,44 @@ byId("download-csv").addEventListener("click", () => downloadReport("csv"));
 byId("layer-satellite").addEventListener("change", refreshImageLayers);
 byId("layer-radar").addEventListener("change", refreshImageLayers);
 ["layer-territories","layer-stations","layer-alerts","layer-incidents"].forEach((id) => byId(id).addEventListener("change", renderMunicipalMap));
+// Sessão do operador: access token curto em memória + refresh rotativo em
+// cookie httpOnly (o token nunca fica acessível a scripts/sessionStorage).
+let refreshTimer = null;
+function scheduleTokenRefresh(expiresAtUtc) {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  const millisecondsToRenewal = new Date(expiresAtUtc).getTime() - Date.now() - 60000;
+  refreshTimer = setTimeout(refreshSession, Math.max(15000, millisecondsToRenewal));
+}
+async function refreshSession() {
+  try {
+    const token = await request("/auth/refresh", {method:"POST"});
+    operationalToken = token.access_token;
+    scheduleTokenRefresh(token.expires_at_utc);
+    return token.access_token;
+  } catch (error) { return null; }
+}
+async function logoutSession() {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  try { await request("/auth/logout", {method:"POST"}); } catch (error) { /* idempotente */ }
+  operationalToken = null;
+  location.reload();
+}
 byId("login-form").addEventListener("submit", async (event) => {
   event.preventDefault(); setState("operation-state", "Autenticando…");
   try {
     const token = await request("/auth/token", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:byId("email").value,password:byId("password").value})});
-    sessionStorage.setItem("meteoro-token", token.access_token); await loadOperation(token.access_token);
+    scheduleTokenRefresh(token.expires_at_utc);
+    byId("login-form").hidden = true; byId("logout-button").hidden = false;
+    await loadOperation(token.access_token);
   } catch (error) { setState("operation-state", error.message); }
 });
-const existingToken = sessionStorage.getItem("meteoro-token"); if (existingToken) loadOperation(existingToken).catch(() => sessionStorage.removeItem("meteoro-token"));
+byId("logout-button").addEventListener("click", logoutSession);
+// Reload não derruba mais o operador: tenta renovar a sessão pelo cookie.
+refreshSession().then((token) => {
+  if (token) {
+    byId("login-form").hidden = true; byId("logout-button").hidden = false;
+    loadOperation(token).catch(() => {});
+  }
+});
 renderModuleCatalog();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/portal/service-worker.js");
