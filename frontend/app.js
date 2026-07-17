@@ -189,6 +189,52 @@ function categoryMeta(category) {
 }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char])); }
 
+// Ícone simbólico para camadas oficiais (usado por official-layers.js).
+function mapSymbolIcon(symbol, kind, label) {
+  return L.divIcon({
+    className: `map-symbol map-symbol-${kind}`,
+    html: `<span role="img" aria-label="${escapeHtml(label)}">${symbol}</span>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+}
+function resizeAviationMap() {
+  if (!aviationMap) return;
+  requestAnimationFrame(() => aviationMap.invalidateSize({pan:false, animate:false}));
+  setTimeout(() => aviationMap?.invalidateSize({pan:false, animate:false}), 180);
+}
+// Mapas em rotas: ao entrar em Monitoramento, recalcular os dois mapas.
+window.addEventListener("hashchange", () => {
+  if (location.hash.includes("operacao/monitoramento")) {
+    setTimeout(() => { municipalMap?.invalidateSize({pan:false, animate:false}); resizeAviationMap(); }, 160);
+  }
+});
+
+// Painéis públicos: Território e Proteção.
+async function loadPublicTerritories() {
+  const state = byId("public-territories-state");
+  if (!state) return;
+  try {
+    const territories = await request("/public/territories");
+    byId("public-territories").innerHTML = territories.length
+      ? territories.map((t) => `<article><h3>${escapeHtml(t.territory_name)}</h3><p>${escapeHtml(t.territory_type)}</p></article>`).join("")
+      : "<p class='muted'>Nenhum território publicado até o momento.</p>";
+    state.textContent = `${territories.length} território(s) com publicação ativa.`;
+  } catch (error) { state.textContent = error.message; }
+}
+async function loadPublicRecommendations() {
+  const state = byId("public-recommendations-state");
+  if (!state) return;
+  try {
+    const items = await request("/public/recommendations");
+    byId("public-recommendations").innerHTML = items.length
+      ? items.map((r) => `<article><h3>${escapeHtml(r.title)}</h3><p>${escapeHtml(r.audience || "população em geral")}</p></article>`).join("")
+      : "<p class='muted'>Nenhuma recomendação pública vigente.</p>";
+    state.textContent = `${items.length} recomendação(ões) publicada(s).`;
+  } catch (error) { state.textContent = error.message; }
+}
+window.addEventListener("load", () => { loadPublicTerritories(); loadPublicRecommendations(); });
+
 const moduleCatalog = [
   ["01","Identidade e acesso","Login, papéis, sessões e auditoria","Homologar identidade municipal e MFA."],
   ["02","Catálogo de fontes","Instituições, produtos, endpoint, licença e saúde","Homologar endpoints, licença e responsável."],

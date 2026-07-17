@@ -25,6 +25,8 @@ from app.modules.public.schemas import (
     PublicSourceHealth,
     PublicTerritory,
 )
+from app.modules.public.daily_brief import build_daily_brief
+from app.modules.public.model_forecast import public_model_forecast
 from app.modules.public.service import public_publication_service
 
 router = APIRouter()
@@ -34,6 +36,26 @@ router = APIRouter()
 def public_alerts(db: Session = Depends(get_db)) -> list[PublicAlert]:
     organization_id = _public_organization_id()
     return [_alert_out(item) for item in public_publication_service.active_alerts(db, organization_id)]
+
+
+@router.get("/meteorology/forecast")
+def public_forecast(db: Session = Depends(get_db)) -> dict:
+    """Previsão de modelo (Open-Meteo) do ponto público, lida do payload bruto."""
+    organization_id = _public_organization_id()
+    try:
+        return public_model_forecast(db, organization_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/daily-brief")
+def public_daily_brief(db: Session = Depends(get_db)) -> dict:
+    """Resumo diário em linguagem cidadã (factual, com IA opcional)."""
+    organization_id = _public_organization_id()
+    try:
+        return build_daily_brief(db, organization_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/recommendations", response_model=list[PublicRecommendation])

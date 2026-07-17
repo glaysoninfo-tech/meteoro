@@ -1,11 +1,21 @@
-const CACHE = "meteoro-portal-v4";
+const CACHE = "meteoro-portal-v5";
 const ASSETS = [
   "/portal/",
   "/portal/styles.css",
   "/portal/operations.css",
   "/portal/modules.css",
   "/portal/reports.css",
+  "/portal/conditions.css",
+  "/portal/guidance.css",
+  "/portal/official-layers.css",
+  "/portal/map-fix.css",
+  "/portal/nav.css",
   "/portal/app.js",
+  "/portal/routes.js",
+  "/portal/map-fix.js",
+  "/portal/official-layers.js",
+  "/portal/conditions.js",
+  "/portal/guidance.js",
   "/portal/manifest.webmanifest",
   "/portal/vendor/leaflet/leaflet.css",
   "/portal/vendor/leaflet/leaflet.js",

@@ -1,0 +1,37 @@
+/* Navegação por rotas (abas públicas e operacionais) */
+.route-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 14px;border-bottom:2px solid #d9ebe6;padding-bottom:10px}
+.route-tabs a{padding:8px 14px;border-radius:8px 8px 0 0;font-weight:700;font-size:.9rem;color:#31535a;text-decoration:none;border:1px solid transparent}
+.route-tabs a:hover{background:#eef6f4}
+.route-tabs a[aria-current="page"]{background:#075c67;color:#fff}
+.route-summary{margin:0 0 16px}
+.route-summary h3{margin:.2rem 0 .6rem;font-size:1.05rem;color:#073b4c}
+.module-pills{display:flex;flex-wrap:wrap;gap:8px}
+.module-pills a{padding:5px 11px;border:1px solid #b7d6cf;border-radius:999px;font-size:.8rem;font-weight:700;color:#075c67;text-decoration:none;background:#fff}
+.module-pills a:hover{background:#e8f3f0}
+
+/* Cartões de condições atuais */
+.current-conditions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:10px 0}
+.current-condition{background:#f6faf9;border:1px solid #d9ebe6;border-radius:10px;padding:12px;display:grid;gap:4px}
+.current-condition span{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:#5a7a80}
+.current-condition strong{font-size:1.5rem;color:#073b4c}
+.current-condition small{color:#5a7a80}
+
+/* Resumo diário */
+.daily-brief{background:#eef6f4;border:1px solid #cfe6df;border-radius:12px;padding:16px 18px;margin:16px 0}
+.daily-brief ul{margin:.5rem 0;padding-left:1.2rem}
+
+/* Botões de orientação */
+.guidance-buttons{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.guidance-buttons button{padding:10px 16px;border:1px solid #b7d6cf;border-radius:9px;background:#fff;font:inherit;font-weight:700;color:#075c67;cursor:pointer}
+.guidance-buttons button:hover{background:#e8f3f0}
+.guidance-buttons button[aria-busy="true"]{opacity:.6;cursor:progress}
+
+/* Links de dados abertos */
+.open-data-links article a{word-break:break-all}
+
+/* Símbolos das camadas oficiais no mapa */
+.map-symbol span{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #075c67;font-size:14px;line-height:1}
+.map-symbol-rain span{border-color:#168aad;color:#168aad}
+.map-symbol-fire span{border-color:#b91c1c;color:#b91c1c}
+
+@media(max-width:640px){.route-tabs{gap:4px}.route-tabs a{padding:7px 10px;font-size:.82rem}}

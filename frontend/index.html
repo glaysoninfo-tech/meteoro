@@ -10,29 +10,100 @@
     <link rel="stylesheet" href="/portal/operations.css" />
     <link rel="stylesheet" href="/portal/modules.css" />
     <link rel="stylesheet" href="/portal/reports.css" />
+    <link rel="stylesheet" href="/portal/conditions.css" />
+    <link rel="stylesheet" href="/portal/guidance.css" />
+    <link rel="stylesheet" href="/portal/official-layers.css" />
+    <link rel="stylesheet" href="/portal/map-fix.css" />
+    <link rel="stylesheet" href="/portal/nav.css" />
     <link rel="stylesheet" href="/portal/vendor/leaflet/leaflet.css" />
   </head>
   <body>
     <div id="api-banner" hidden role="alert" style="background:#7f1d1d;color:#fff;text-align:center;padding:.55rem .8rem;font-weight:600;"></div>
     <header>
-      <a class="brand" href="#public">Meteoro <span>Clima</span></a>
-      <nav><a href="#public">Público</a><a href="#modules">Módulos</a><a href="#operacao">Operação</a></nav>
+      <a class="brand" href="#public/situacao">Meteoro <span>Clima</span></a>
+      <nav><a href="#public/situacao">Público</a><a href="#operacao/visao-geral">Operação</a></nav>
     </header>
     <main>
-      <section id="public" class="hero">
-        <p class="eyebrow">PLATAFORMA MUNICIPAL</p>
-        <h1>Informação climática clara para decisões seguras.</h1>
-        <p>Alertas oficiais, cobertura territorial e dados de operação em uma mesma plataforma.</p>
-        <button id="load-public">Atualizar alertas públicos</button>
-        <p id="public-state" class="muted">Configure PUBLIC_ORGANIZATION_ID para publicar dados municipais.</p>
-        <div id="public-alerts" class="cards"></div>
+      <!-- ===================== ÁREA PÚBLICA ===================== -->
+      <section id="public">
+        <nav id="public-tabs" class="route-tabs" aria-label="Seções públicas"></nav>
+
+        <div data-public-route="situacao">
+          <div class="hero">
+            <p class="eyebrow">PLATAFORMA MUNICIPAL</p>
+            <h1>Informação climática clara para decisões seguras.</h1>
+            <p>Situação atual, previsão e alertas oficiais em linguagem simples.</p>
+          </div>
+          <article class="daily-brief" aria-labelledby="daily-brief-title">
+            <p class="eyebrow">RESUMO DO DIA</p>
+            <h3 id="daily-brief-title">Resumo diário</h3>
+            <p id="daily-brief-message">Carregando o resumo das próximas horas…</p>
+            <p><span id="daily-brief-mode" class="muted"></span> · <small id="daily-brief-time"></small></p>
+            <div id="daily-brief-details"></div>
+            <p id="daily-brief-disclaimer" class="disclaimer"></p>
+          </article>
+          <section aria-label="Condições atuais">
+            <p class="eyebrow">CONDIÇÕES AGORA</p>
+            <div class="current-conditions">
+              <article id="current-temperature" class="current-condition"><span>Temperatura</span><strong>—</strong><small>carregando…</small></article>
+              <article id="current-rainfall" class="current-condition"><span>Chuva (1 h)</span><strong>—</strong><small>carregando…</small></article>
+              <article id="current-humidity" class="current-condition"><span>Umidade</span><strong>—</strong><small>carregando…</small></article>
+              <article id="current-wind" class="current-condition"><span>Vento</span><strong>—</strong><small>carregando…</small></article>
+            </div>
+            <p id="current-conditions-state" class="muted"></p>
+          </section>
+          <section aria-label="Previsão de modelo">
+            <p class="eyebrow">PRÓXIMAS 24 HORAS</p>
+            <div id="public-forecast-grid" class="forecast-grid"></div>
+            <p id="public-forecast-state" class="muted">Carregando previsão…</p>
+            <p id="public-forecast-note" class="disclaimer"></p>
+          </section>
+        </div>
+
+        <div data-public-route="alertas" hidden>
+          <p class="eyebrow">ALERTAS OFICIAIS</p>
+          <button id="load-public">Atualizar alertas públicos</button>
+          <p id="public-state" class="muted">Carregando alertas…</p>
+          <div id="public-alerts" class="cards"></div>
+          <section aria-label="Orientações por tema">
+            <p class="eyebrow">ORIENTAÇÕES RÁPIDAS</p>
+            <div class="guidance-buttons">
+              <button type="button" data-guidance-topic="heat">☀ Calor e umidade</button>
+              <button type="button" data-guidance-topic="air">◌ Qualidade do ar</button>
+              <button type="button" data-guidance-topic="fire">△ Queimadas</button>
+            </div>
+          </section>
+        </div>
+
+        <div data-public-route="territorio" hidden>
+          <p class="eyebrow">TERRITÓRIO</p>
+          <h2>Cobertura territorial publicada</h2>
+          <p id="public-territories-state" class="muted">Carregando territórios…</p>
+          <div id="public-territories" class="cards"></div>
+        </div>
+
+        <div data-public-route="protecao" hidden>
+          <p class="eyebrow">PROTEÇÃO E POLÍTICAS</p>
+          <h2>Recomendações públicas vigentes</h2>
+          <p id="public-recommendations-state" class="muted">Carregando recomendações…</p>
+          <div id="public-recommendations" class="cards"></div>
+        </div>
+
+        <div data-public-route="dados" hidden>
+          <p class="eyebrow">DADOS E METODOLOGIA</p>
+          <h2>Dados abertos</h2>
+          <p>Os dados públicos validados podem ser reutilizados livremente com citação da fonte.</p>
+          <div class="cards open-data-links">
+            <article><h3>Catálogo de dados abertos</h3><p><a href="/api/v1/public/open-data" target="_blank" rel="noopener">/api/v1/public/open-data</a></p></article>
+            <article><h3>Observações (JSON paginado)</h3><p><a href="/api/v1/public/open-data/observations" target="_blank" rel="noopener">/api/v1/public/open-data/observations</a></p></article>
+            <article><h3>Observações (CSV)</h3><p><a href="/api/v1/public/open-data/observations.csv" target="_blank" rel="noopener">/api/v1/public/open-data/observations.csv</a></p></article>
+            <article><h3>Metodologia</h3><p><a href="/api/v1/public/methodology" target="_blank" rel="noopener">/api/v1/public/methodology</a></p></article>
+          </div>
+        </div>
       </section>
-      <section id="modules" class="operation modules-section" aria-labelledby="modules-title">
-        <div><p class="eyebrow">INTERFACES DO MVP</p><h2 id="modules-title">Módulos e fluxos disponíveis</h2><p class="muted">Todas as telas estão disponíveis. Pendências indicadas em cada módulo dependem somente de homologação, aprovação institucional ou evidência de campo.</p></div>
-        <div id="module-catalog" class="module-catalog" role="list" aria-label="Módulos do METEORO"></div>
-        <section id="module-workspace" class="module-workspace-live" aria-live="polite" hidden></section>
-      </section>
-      <section id="operacao" class="operation">
+
+      <!-- ===================== ÁREA OPERACIONAL ===================== -->
+      <section id="operacao" hidden>
         <div><p class="eyebrow">ÁREA RESTRITA</p><h2>Painel operacional</h2></div>
         <form id="login-form" class="login">
           <label>E-mail<input id="email" type="email" required autocomplete="username" /></label>
@@ -40,51 +111,92 @@
           <button>Entrar</button>
         </form>
         <button id="logout-button" type="button" hidden>Sair da sessão</button>
-        <p id="operation-state" class="muted">Entre para visualizar a situação, o mapa, as filas e a saúde dos conectores.</p>
-        <div id="operation-data" class="metrics" hidden>
-          <article><strong id="metric-quality">–</strong><span>dados aguardando revisão</span></article>
-          <article><strong id="metric-stations">–</strong><span>estações cadastradas</span></article>
-          <article><strong id="metric-protocols">–</strong><span>protocolos pendentes</span></article>
+        <p id="operation-state" class="muted">Entre para visualizar a situação, os mapas e as filas operacionais.</p>
+
+        <nav id="operational-tabs" class="route-tabs" aria-label="Áreas operacionais"></nav>
+        <div id="operational-route-summary" class="route-summary"></div>
+
+        <div data-operational-group="visao-geral" hidden>
+          <div id="operation-data" class="metrics" hidden>
+            <article><strong id="metric-quality">–</strong><span>dados aguardando revisão</span></article>
+            <article><strong id="metric-stations">–</strong><span>estações cadastradas</span></article>
+            <article><strong id="metric-protocols">–</strong><span>protocolos pendentes</span></article>
+          </div>
+          <p class="eyebrow">EXECUÇÕES RECENTES DE INGESTÃO</p>
+          <div id="run-list" class="list" hidden></div>
         </div>
-        <div id="run-list" class="list" hidden></div>
-        <section id="municipal-map-panel" class="aviation" hidden aria-labelledby="municipal-map-title">
-          <div class="section-title"><div><p class="eyebrow">VISÃO MUNICIPAL</p><h3 id="municipal-map-title">Mapa operacional</h3></div><button id="refresh-operation" type="button">Atualizar painel</button></div>
-          <p id="municipal-map-state" class="muted">Carregando camadas municipais…</p>
-          <div class="map-controls" role="group" aria-label="Camadas do mapa municipal"><label><input id="layer-territories" type="checkbox" checked /> Territórios</label><label><input id="layer-stations" type="checkbox" checked /> Estações</label><label><input id="layer-alerts" type="checkbox" checked /> Alertas oficiais</label><label><input id="layer-incidents" type="checkbox" checked /> Ocorrências georreferenciadas</label></div>
-          <div id="municipal-map" role="region" aria-label="Mapa municipal com territórios, estações, alertas e ocorrências"></div>
-          <p class="disclaimer">O mapa mostra somente geometria fornecida ou homologada. Endereços e bairros sem coordenadas não são posicionados por estimativa.</p>
-        </section>
-        <section id="operational-queues" class="queue-grid" hidden aria-label="Filas operacionais">
-          <article><p class="eyebrow">QUALIDADE</p><h3>Dados suspeitos</h3><div id="quality-list" class="queue-list"></div></article>
-          <article><p class="eyebrow">OCORRÊNCIAS</p><h3>Triagem pendente</h3><div id="incident-list" class="queue-list"></div></article>
-          <article><p class="eyebrow">PROTOCOLOS</p><h3>Aprovação pendente</h3><div id="protocol-list" class="queue-list"></div></article>
-        </section>
-        <section id="reports-panel" class="aviation reports-panel" hidden aria-labelledby="reports-title">
-          <div class="section-title"><div><p class="eyebrow">RELATÓRIOS E SOLICITAÇÕES</p><h3 id="reports-title">Previsão e saídas operacionais</h3></div></div>
-          <form id="reports-form" class="report-form">
-            <label>Saída<select id="report-kind"><option value="forecast">Previsão por horizonte</option><option value="committee">Relatório climático do Gabinete</option><option value="availability">Disponibilidade de estações</option></select></label>
-            <label>Horizonte/período (horas)<input id="report-hours" type="number" min="1" max="720" value="24" /></label>
-            <label>Passo da previsão (horas)<input id="report-step" type="number" min="1" max="24" value="6" /></label>
-            <button>Gerar consulta</button><button id="download-pdf" type="button">Baixar PDF</button><button id="download-csv" type="button">Baixar CSV</button>
-          </form>
-          <p id="report-state" class="muted">Selecione a saída e gere uma consulta autenticada.</p>
-          <div id="report-result" class="report-result" aria-live="polite"></div>
-          <p class="disclaimer">A previsão interna usa tendência estatística das observações válidas; não substitui previsão oficial. PDFs e CSVs carregam somente dados aos quais o perfil autenticado tem acesso.</p>
-        </section>
-        <section id="aviation-panel" class="aviation" hidden aria-labelledby="aviation-title">
-          <div class="section-title"><div><p class="eyebrow">CONTEXTO AERONÁUTICO REGIONAL</p><h3 id="aviation-title">REDEMET / DECEA</h3></div><button id="refresh-aviation" type="button">Atualizar mapa</button></div>
-          <p id="aviation-state" class="muted">Carregue os conectores REDEMET para visualizar SBBH e SNDV.</p>
-          <div class="aviation-legend" aria-label="Legenda de categoria de voo"><span><i class="dot status-g"></i>Verde: VFR</span><span><i class="dot status-y"></i>Amarelo: atenção</span><span><i class="dot status-r"></i>Vermelho: IFR</span><span><i class="dot status-u"></i>Sem dado</span></div>
-          <div class="map-controls" role="group" aria-label="Camadas meteorológicas"><label><input id="layer-satellite" type="checkbox" checked /> Satélite IR realçado</label><label><input id="layer-radar" type="checkbox" checked /> Radar MaxCAPPI</label><strong id="lightning-counter">Raios: aguardando fonte</strong></div>
-          <div id="aviation-map" role="region" aria-label="Mapa de condições aeronáuticas regionais"></div>
-          <div id="aviation-cards" class="cards aviation-cards"></div>
-          <p class="disclaimer">As cores são categorias aeronáuticas da REDEMET, calculadas no aeródromo por visibilidade e teto. Não representam alerta municipal nem condição observada em Betim.</p>
-        </section>
+
+        <div data-operational-group="monitoramento" hidden>
+          <section id="municipal-map-panel" class="aviation" hidden aria-labelledby="municipal-map-title">
+            <div class="section-title"><div><p class="eyebrow">VISÃO MUNICIPAL</p><h3 id="municipal-map-title">Mapa operacional</h3></div><button id="refresh-operation" type="button">Atualizar painel</button></div>
+            <p id="municipal-map-state" class="muted">Carregando camadas municipais…</p>
+            <div class="map-controls" role="group" aria-label="Camadas do mapa municipal"><label><input id="layer-territories" type="checkbox" checked /> Territórios</label><label><input id="layer-stations" type="checkbox" checked /> Estações</label><label><input id="layer-alerts" type="checkbox" checked /> Alertas oficiais</label><label><input id="layer-incidents" type="checkbox" checked /> Ocorrências georreferenciadas</label></div>
+            <div id="municipal-map" role="region" aria-label="Mapa municipal com territórios, estações, alertas e ocorrências"></div>
+            <p class="disclaimer">O mapa mostra somente geometria fornecida ou homologada. Endereços e bairros sem coordenadas não são posicionados por estimativa.</p>
+          </section>
+          <section class="queue-grid" aria-label="Qualidade dos dados">
+            <article><p class="eyebrow">QUALIDADE</p><h3>Dados suspeitos</h3><div id="quality-list" class="queue-list"></div></article>
+          </section>
+          <section id="aviation-panel" class="aviation" hidden aria-labelledby="aviation-title">
+            <div class="section-title"><div><p class="eyebrow">CONTEXTO AERONÁUTICO REGIONAL</p><h3 id="aviation-title">REDEMET / DECEA</h3></div><button id="refresh-aviation" type="button">Atualizar mapa</button></div>
+            <p id="aviation-state" class="muted">Carregue os conectores REDEMET para visualizar SBBH e SNDV.</p>
+            <div class="aviation-legend" aria-label="Legenda de categoria de voo"><span><i class="dot status-g"></i>Verde: VFR</span><span><i class="dot status-y"></i>Amarelo: atenção</span><span><i class="dot status-r"></i>Vermelho: IFR</span><span><i class="dot status-u"></i>Sem dado</span></div>
+            <div class="map-controls" role="group" aria-label="Camadas meteorológicas"><label><input id="layer-satellite" type="checkbox" checked /> Satélite IR realçado</label><label><input id="layer-radar" type="checkbox" checked /> Radar MaxCAPPI</label><strong id="lightning-counter">Raios: aguardando fonte</strong></div>
+            <div id="aviation-map" role="region" aria-label="Mapa de condições aeronáuticas regionais"></div>
+            <div id="aviation-cards" class="cards aviation-cards"></div>
+            <p class="disclaimer">As cores são categorias aeronáuticas da REDEMET, calculadas no aeródromo por visibilidade e teto. Não representam alerta municipal nem condição observada em Betim.</p>
+          </section>
+        </div>
+
+        <div data-operational-group="resposta" hidden>
+          <section id="operational-queues" class="queue-grid" hidden aria-label="Filas de resposta">
+            <article><p class="eyebrow">OCORRÊNCIAS</p><h3>Triagem pendente</h3><div id="incident-list" class="queue-list"></div></article>
+            <article><p class="eyebrow">PROTOCOLOS</p><h3>Aprovação pendente</h3><div id="protocol-list" class="queue-list"></div></article>
+          </section>
+        </div>
+
+        <div data-operational-group="planejamento" hidden>
+          <section id="reports-panel" class="aviation reports-panel" hidden aria-labelledby="reports-title">
+            <div class="section-title"><div><p class="eyebrow">RELATÓRIOS E SOLICITAÇÕES</p><h3 id="reports-title">Previsão e saídas operacionais</h3></div></div>
+            <form id="reports-form" class="report-form">
+              <label>Saída<select id="report-kind"><option value="forecast">Previsão por horizonte</option><option value="committee">Relatório climático do Gabinete</option><option value="availability">Disponibilidade de estações</option></select></label>
+              <label>Horizonte/período (horas)<input id="report-hours" type="number" min="1" max="720" value="24" /></label>
+              <label>Passo da previsão (horas)<input id="report-step" type="number" min="1" max="24" value="6" /></label>
+              <button>Gerar consulta</button><button id="download-pdf" type="button">Baixar PDF</button><button id="download-csv" type="button">Baixar CSV</button>
+            </form>
+            <p id="report-state" class="muted">Selecione a saída e gere uma consulta autenticada.</p>
+            <div id="report-result" class="report-result" aria-live="polite"></div>
+            <p class="disclaimer">A previsão interna usa tendência estatística das observações válidas; não substitui previsão oficial. PDFs e CSVs carregam somente dados aos quais o perfil autenticado tem acesso.</p>
+          </section>
+        </div>
+
+        <div data-operational-group="governanca" hidden>
+          <section id="module-workspace" class="module-workspace-live" aria-live="polite"></section>
+        </div>
       </section>
     </main>
+
+    <dialog id="guidance-dialog" class="guidance-dialog" aria-labelledby="guidance-title">
+      <header>
+        <span id="guidance-icon" aria-hidden="true"></span>
+        <div><h3 id="guidance-title"></h3><p id="guidance-state" class="muted"></p></div>
+        <button id="guidance-close" type="button" aria-label="Fechar orientações">Fechar</button>
+      </header>
+      <p id="guidance-summary"></p>
+      <h4>O que os dados mostram</h4>
+      <ul id="guidance-facts"></ul>
+      <h4>Orientações</h4>
+      <ul id="guidance-advice"></ul>
+    </dialog>
+
     <footer>Dados públicos são informativos. Em emergência, siga as orientações oficiais da Defesa Civil.</footer>
     <script src="/portal/vendor/leaflet/leaflet.js"></script>
     <script src="/portal/vendor/leaflet-heat.js"></script>
     <script src="/portal/app.js"></script>
+    <script src="/portal/routes.js"></script>
+    <script src="/portal/map-fix.js"></script>
+    <script src="/portal/official-layers.js"></script>
+    <script src="/portal/conditions.js"></script>
+    <script src="/portal/guidance.js"></script>
   </body>
 </html>
