@@ -16,9 +16,12 @@
 .current-condition strong{font-size:1.5rem;color:#073b4c}
 .current-condition small{color:#5a7a80}
 
-/* Resumo diário */
-.daily-brief{background:#eef6f4;border:1px solid #cfe6df;border-radius:12px;padding:16px 18px;margin:16px 0}
-.daily-brief ul{margin:.5rem 0;padding-left:1.2rem}
+/* Resumo diário: o visual (gradiente escuro + texto claro) vem do
+   conditions.css — aqui só complementos para os elementos deste layout. */
+.daily-brief h3{color:#fff;margin:.15rem 0 .65rem}
+.daily-brief .muted{color:#d8f3ef}
+.daily-brief a{color:#b9f1ea}
+.daily-brief ul{margin:.5rem 0;padding-left:1.2rem;color:#e8f7f5}
 
 /* Botões de orientação */
 .guidance-buttons{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
