@@ -37,6 +37,9 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql+psycopg://meteoro:meteoro@localhost:5432/meteoro_ci
+      # A suíte de testes roda contra o mesmo PostGIS, com schema criado
+      # pela cadeia real de migrações (ver tests/conftest.py).
+      TEST_DATABASE_URL: postgresql+psycopg://meteoro:meteoro@localhost:5432/meteoro_ci
       AUTH_MODE: local
       JWT_SECRET_KEY: ci-only-secret-not-for-production
       INGESTION_NETWORK_ALLOWED_HOSTS: api.example.org

@@ -77,8 +77,18 @@ Para executar a suíte local e a verificação estática:
 cd backend
 pip install -r requirements-dev.txt
 ruff check app
-pytest -q
+pytest -q                # rápido: SQLite em memória
 ```
+
+Para rodar a suíte contra PostgreSQL/PostGIS com as migrações reais (mesmo
+caminho da produção e do CI), defina `TEST_DATABASE_URL`:
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://meteoro:meteoro@localhost:5432/meteoro pytest -q
+```
+
+> Atenção: o banco apontado por `TEST_DATABASE_URL` tem o schema RECRIADO
+> do zero a cada execução da suíte. Nunca aponte para um banco com dados reais.
 
 A esteira em `.github/workflows/ci.yml` executa lint, migração Alembic em PostgreSQL/PostGIS e a suíte automatizada a cada push ou pull request.
 

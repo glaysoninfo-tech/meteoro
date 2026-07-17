@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Generator
 from datetime import datetime, timezone
 
 import pytest
+from alembic import command as alembic_command
+from alembic.config import Config as AlembicConfig
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -15,6 +19,11 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.modules.identity.models import RoleModel, UserModel, UserRoleModel
+
+# Quando definida (CI ou desenvolvedor com Postgres local), a suíte roda contra
+# PostgreSQL/PostGIS com schema criado pela cadeia REAL de migrações Alembic —
+# o mesmo caminho da produção. Sem ela, mantém SQLite em memória (rápido, local).
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "").strip()
 
 
 @pytest.fixture(autouse=True)
@@ -29,8 +38,41 @@ def isolated_runtime_settings(tmp_path, monkeypatch: pytest.MonkeyPatch) -> Gene
     yield
 
 
+@pytest.fixture(scope="session")
+def _postgres_engine() -> Generator[Engine, None, None]:
+    """Engine de sessão para PostgreSQL: schema zerado + migrações reais."""
+    engine = create_engine(TEST_DATABASE_URL, future=True, pool_pre_ping=True)
+    with engine.connect() as connection:
+        connection.execute(text("DROP SCHEMA public CASCADE"))
+        connection.execute(text("CREATE SCHEMA public"))
+        connection.commit()
+    previous_url = settings.database_url
+    settings.database_url = TEST_DATABASE_URL
+    try:
+        alembic_command.upgrade(AlembicConfig("alembic.ini"), "head")
+    finally:
+        settings.database_url = previous_url
+    try:
+        yield engine
+    finally:
+        engine.dispose()
+
+
+def _clean_database(engine: Engine) -> None:
+    """Esvazia todas as tabelas do domínio preservando o schema migrado."""
+    with engine.begin() as connection:
+        for table in reversed(Base.metadata.sorted_tables):
+            connection.execute(table.delete())
+
+
 @pytest.fixture
-def session_factory() -> Generator[sessionmaker[Session], None, None]:
+def session_factory(request: pytest.FixtureRequest) -> Generator[sessionmaker[Session], None, None]:
+    if TEST_DATABASE_URL:
+        engine = request.getfixturevalue("_postgres_engine")
+        _clean_database(engine)
+        yield sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
+        return
+
     engine = create_engine(
         "sqlite+pysqlite://",
         connect_args={"check_same_thread": False},
