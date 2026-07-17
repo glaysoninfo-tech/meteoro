@@ -71,6 +71,7 @@ async function loadOperation(token) {
   byId("operational-queues").hidden = false;
   byId("reports-panel").hidden = false;
   byId("aviation-panel").hidden = false;
+  byId("module-workspace").hidden = false;
   latestOperationalMap = mapData;
   renderMunicipalMap();
   renderQueues(qualityIssues, incidents, activations);
@@ -376,3 +377,16 @@ refreshSession().then((token) => {
 });
 renderModuleCatalog();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/portal/service-worker.js");
+
+// Atualização automática: painel operacional a cada 5 min; público a cada 10 min.
+setInterval(() => {
+  if (operationalToken) loadOperation(operationalToken).catch(() => {});
+}, 5 * 60 * 1000);
+setInterval(() => {
+  loadPublic();
+  loadPublicTerritories();
+  loadPublicRecommendations();
+  if (typeof loadCurrentConditions === "function") loadCurrentConditions();
+  if (typeof loadPublicForecast === "function") loadPublicForecast();
+  if (typeof loadDailyBrief === "function") loadDailyBrief();
+}, 10 * 60 * 1000);

@@ -52,6 +52,18 @@ def _facts(db: Session, organization_id: str) -> dict:
         for series in forecast["series"]
     }
     map_data = meteorology_service.get_operational_map_layers(db, organization_id)
+    # Valor mais recente de cada variável pública acompanhada.
+    tracked = ("temperature_c", "humidity_pct", "rainfall_mm_1h", "wind_speed_mps")
+    values: dict[str, float | None] = {code: None for code in tracked}
+    latest_at: dict[str, object] = {}
+    for observation, _source in rows:
+        code = observation.variable_code
+        if code not in values:
+            continue
+        when = observation.observed_at_utc
+        if code not in latest_at or when > latest_at[code]:
+            latest_at[code] = when
+            values[code] = round(float(observation.value_canonical), 1)
     return {
         "current": values,
         "next_24h": {
@@ -62,7 +74,8 @@ def _facts(db: Session, organization_id: str) -> dict:
             "wind_max_m_s": max(projected.get("wind_speed_mps", [0])),
         },
         "active_official_alerts": len(public_publication_service.active_alerts(db, organization_id)),
-        "regional_thunderstorm_areas": len(map_data.thunderstorm_areas),
+        # O campo thunderstorm_areas depende da fonte STSC; ausente, conta zero.
+        "regional_thunderstorm_areas": len(getattr(map_data, "thunderstorm_areas", None) or []),
         "forecast_kind": "estimativa automatizada de tendência",
     }
 
