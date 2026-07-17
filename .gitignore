@@ -22,6 +22,7 @@ build/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # OS / Editor
 .DS_Store

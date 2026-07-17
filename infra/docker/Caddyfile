@@ -1,0 +1,32 @@
+# Proxy TLS da produção assistida (LAN).
+#
+# "tls internal" faz o Caddy emitir certificados por CA interna própria —
+# instale o certificado raiz (volume caddy-data, arquivo
+# /data/caddy/pki/authorities/local/root.crt) nas estações dos operadores
+# para navegar sem aviso. Ajuste o hostname abaixo para o DNS interno ou
+# IP fixo do servidor.
+
+{
+	local_certs
+}
+
+meteoro.local {
+	tls internal
+	encode gzip
+
+	# API e portal servidos pelo backend.
+	reverse_proxy api:8000
+
+	# Cabeçalhos de transporte seguro na borda.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+# Acesso por IP direto (ajuste para o IP fixo do servidor na LAN).
+# https://192.168.0.10 {
+# 	tls internal
+# 	encode gzip
+# 	reverse_proxy api:8000
+# }
