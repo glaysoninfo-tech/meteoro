@@ -1,7 +1,10 @@
 import os
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+INSECURE_JWT_DEFAULT = "change-this-secret-in-production"
+MIN_JWT_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -10,7 +13,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str = "postgresql+psycopg://meteoro:meteoro@localhost:5432/meteoro"
     auth_mode: str = "local"
-    jwt_secret_key: str = "change-this-secret-in-production"
+    jwt_secret_key: str = INSECURE_JWT_DEFAULT
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     keycloak_issuer_url: str | None = None
@@ -49,6 +52,24 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def validate_production_safety(self) -> "Settings":
+        """Em produção, a aplicação NÃO SOBE com segredo default ou fraco."""
+        if self.environment.strip().lower() == "production":
+            if self.jwt_secret_key == INSECURE_JWT_DEFAULT:
+                raise ValueError(
+                    "ENVIRONMENT=production exige JWT_SECRET_KEY próprio: o valor "
+                    "default do repositório não é permitido. Gere um segredo forte "
+                    "(ex.: python -c \"import secrets; print(secrets.token_urlsafe(48))\") "
+                    "e defina-o no ambiente."
+                )
+            if len(self.jwt_secret_key) < MIN_JWT_SECRET_LENGTH:
+                raise ValueError(
+                    f"ENVIRONMENT=production exige JWT_SECRET_KEY com pelo menos "
+                    f"{MIN_JWT_SECRET_LENGTH} caracteres (atual: {len(self.jwt_secret_key)})."
+                )
+        return self
 
     @field_validator("auth_mode")
     @classmethod
