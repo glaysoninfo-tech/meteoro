@@ -15,6 +15,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.settings import settings
+# O worker roda fora da API e não importa os routers; o import abaixo registra
+# TODOS os models no metadata — sem ele, FKs entre módulos (ex.:
+# ingestion_jobs.organization_id -> organizations) falham no flush.
+from app.db import init_db as _models_registry  # noqa: F401
 from app.db.session import SessionLocal
 from app.modules.ingestion.models import IngestionJobModel
 from app.modules.ingestion.service import ingestion_service
