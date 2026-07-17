@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     ingestion_worker_poll_seconds: int = 5
     ingestion_worker_lock_ttl_seconds: int = 300
     public_organization_id: str | None = None
+    # Resumo diário assistido por IA (opcional): sem chave, o texto é factual
+    # automático; com chave, o build_daily_brief usa o modelo indicado.
+    openai_api_key: str | None = None
+    openai_daily_brief_model: str = "gpt-4o-mini"
     # Rate limit por IP dos endpoints públicos (janela fixa de 60 s).
     public_rate_limit_enabled: bool = True
     public_rate_limit_per_minute: int = 120

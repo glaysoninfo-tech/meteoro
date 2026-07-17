@@ -10,8 +10,15 @@ from app.db.session import get_db
 from app.modules.audit.service import audit_service
 from app.modules.identity.dependencies import require_roles
 from app.modules.identity.schemas import CurrentUser
+from app.modules.planning.models import CabinetDecisionModel
 from app.modules.planning.pdf import build_simple_pdf
-from app.modules.planning.schemas import CommitteeClimateReport, StationAvailabilityReport
+from app.modules.planning.schemas import (
+    CabinetDecisionCreate,
+    CabinetDecisionOut,
+    CabinetDecisionUpdate,
+    CommitteeClimateReport,
+    StationAvailabilityReport,
+)
 from app.modules.planning.service import planning_service
 
 router = APIRouter()
@@ -172,3 +179,97 @@ def station_availability_pdf(
         ("Estacoes", [f"{item.station_code} | {item.health_status} | completude {item.completeness_percent if item.completeness_percent is not None else 'n/d'}% | ultima observacao {item.last_observed_at_utc.isoformat() if item.last_observed_at_utc else 'n/d'}" for item in report.stations] or ["Nenhuma estacao cadastrada no periodo."]),
     ])
     return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=meteoro-disponibilidade-estacoes.pdf"})
+
+
+# ----------------------- Decisões do Gabinete -----------------------
+
+
+@router.post("/cabinet/decisions", response_model=CabinetDecisionOut, status_code=201)
+def create_cabinet_decision(
+    payload: CabinetDecisionCreate,
+    current_user: CurrentUser = Depends(require_roles("admin_general", "operator")),
+    db: Session = Depends(get_db),
+) -> CabinetDecisionOut:
+    """Registra decisão do Gabinete com responsável, prazo e trilha de auditoria."""
+    now = datetime.now(tz=timezone.utc)
+    decision = CabinetDecisionModel(
+        organization_id=current_user.organization_id,
+        risk_key=payload.risk_key.strip(),
+        territory=payload.territory.strip(),
+        decision=payload.decision.strip(),
+        responsible_action=payload.responsible_action.strip(),
+        responsible_role=payload.responsible_role.strip(),
+        deadline_utc=payload.deadline_utc,
+        status=payload.status,
+        notes=payload.notes,
+        created_by=current_user.email,
+        updated_by=current_user.email,
+        created_at=now,
+        updated_at=now,
+        completed_at_utc=now if payload.status == "completed" else None,
+    )
+    db.add(decision)
+    db.flush()
+    audit_service.create_event(
+        db=db,
+        module="planning",
+        action="cabinet.decision_created",
+        actor=current_user.email,
+        organization_id=current_user.organization_id,
+        resource_type="cabinet_decision",
+        resource_id=decision.decision_id,
+    )
+    db.commit()
+    db.refresh(decision)
+    return CabinetDecisionOut.model_validate(decision)
+
+
+@router.get("/cabinet/decisions", response_model=list[CabinetDecisionOut])
+def list_cabinet_decisions(
+    status_filter: str | None = Query(default=None, alias="status"),
+    current_user: CurrentUser = Depends(
+        require_roles("admin_general", "operator", "analyst", "auditor")
+    ),
+    db: Session = Depends(get_db),
+) -> list[CabinetDecisionOut]:
+    from sqlalchemy import select
+
+    stmt = select(CabinetDecisionModel).where(
+        CabinetDecisionModel.organization_id == current_user.organization_id
+    )
+    if status_filter:
+        stmt = stmt.where(CabinetDecisionModel.status == status_filter)
+    stmt = stmt.order_by(CabinetDecisionModel.created_at.desc())
+    return [CabinetDecisionOut.model_validate(item) for item in db.scalars(stmt).all()]
+
+
+@router.patch("/cabinet/decisions/{decision_id}", response_model=CabinetDecisionOut)
+def update_cabinet_decision(
+    decision_id: str,
+    payload: CabinetDecisionUpdate,
+    current_user: CurrentUser = Depends(require_roles("admin_general", "operator")),
+    db: Session = Depends(get_db),
+) -> CabinetDecisionOut:
+    decision = db.get(CabinetDecisionModel, decision_id)
+    if decision is None or decision.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=404, detail="Decisão não encontrada.")
+    now = datetime.now(tz=timezone.utc)
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(decision, field, value)
+    if updates.get("status") == "completed" and decision.completed_at_utc is None:
+        decision.completed_at_utc = now
+    decision.updated_by = current_user.email
+    decision.updated_at = now
+    audit_service.create_event(
+        db=db,
+        module="planning",
+        action="cabinet.decision_updated",
+        actor=current_user.email,
+        organization_id=current_user.organization_id,
+        resource_type="cabinet_decision",
+        resource_id=decision.decision_id,
+    )
+    db.commit()
+    db.refresh(decision)
+    return CabinetDecisionOut.model_validate(decision)

@@ -3,6 +3,46 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class CabinetDecisionCreate(BaseModel):
+    risk_key: str = Field(min_length=3, max_length=240)
+    territory: str = Field(min_length=2, max_length=160)
+    decision: str = Field(min_length=5)
+    responsible_action: str = Field(min_length=5, max_length=500)
+    responsible_role: str = Field(min_length=2, max_length=160)
+    deadline_utc: datetime | None = None
+    status: str = Field(default="open", pattern="^(open|in_progress|completed|cancelled)$")
+    notes: str | None = None
+
+
+class CabinetDecisionUpdate(BaseModel):
+    decision: str | None = Field(default=None, min_length=5)
+    responsible_action: str | None = Field(default=None, min_length=5, max_length=500)
+    responsible_role: str | None = Field(default=None, min_length=2, max_length=160)
+    deadline_utc: datetime | None = None
+    status: str | None = Field(default=None, pattern="^(open|in_progress|completed|cancelled)$")
+    notes: str | None = None
+
+
+class CabinetDecisionOut(BaseModel):
+    decision_id: str
+    organization_id: str
+    risk_key: str
+    territory: str
+    decision: str
+    responsible_action: str
+    responsible_role: str
+    deadline_utc: datetime | None
+    status: str
+    notes: str | None
+    created_by: str
+    updated_by: str
+    created_at: datetime
+    updated_at: datetime
+    completed_at_utc: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
 class QualityDistribution(BaseModel):
     valid: int = Field(ge=0)
     suspect: int = Field(ge=0)
