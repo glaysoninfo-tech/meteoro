@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import csv
 import json
 from io import StringIO
@@ -363,6 +363,10 @@ def _parse_open_meteo(records: list[dict[str, Any]], source: SourceModel) -> lis
     """
     observations: list[ParsedObservation] = []
     location = _configured_location(source) or "BETIM_MODEL_POINT"
+    # Horas FUTURAS do payload são previsão de modelo: ficam disponíveis no
+    # raw asset (consumido por public/model_forecast) e NÃO viram observação —
+    # gravá-las inundava a fila de qualidade com timestamp_future (regra >5min).
+    future_cutoff = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
     for record in records:
         hourly = record.get("hourly")
         if not isinstance(hourly, dict):
@@ -378,6 +382,8 @@ def _parse_open_meteo(records: list[dict[str, Any]], source: SourceModel) -> lis
         }
         for index, timestamp in enumerate(times):
             observed_at = _extract_datetime({"timestamp": timestamp}, aliases=["timestamp"])
+            if observed_at > future_cutoff:
+                continue
             for field, (variable_code, unit) in mappings.items():
                 values = hourly.get(field)
                 if not isinstance(values, list) or index >= len(values):
