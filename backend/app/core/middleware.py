@@ -10,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.metrics import record_request
 from app.core.request_context import reset_request_id, set_request_id
 
 access_logger = logging.getLogger("meteoro.access")
@@ -46,6 +47,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             response.headers["X-Request-ID"] = request_id
             duration_ms = round((time.perf_counter() - started) * 1000, 1)
+            record_request(status_code=response.status_code, duration_ms=duration_ms)
             access_logger.info(
                 "%s %s -> %s",
                 request.method,

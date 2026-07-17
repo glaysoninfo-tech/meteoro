@@ -14,6 +14,16 @@ meteoro.local {
 	tls internal
 	encode gzip
 
+	# Métricas nunca saem pela borda — o Prometheus coleta pela rede interna.
+	@metrics path /metrics /metrics/*
+	respond @metrics 403
+
+	# Grafana (dashboards) para operadores autenticados no próprio Grafana.
+	handle_path /grafana/* {
+		reverse_proxy grafana:3000
+	}
+	redir /grafana /grafana/
+
 	# API e portal servidos pelo backend.
 	reverse_proxy api:8000
 

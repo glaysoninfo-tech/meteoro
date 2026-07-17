@@ -1,13 +1,15 @@
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.health import readiness_report
+from app.core.metrics import render_metrics
+from app.db.session import get_db
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
 from app.core.ratelimit import PublicRateLimitMiddleware
@@ -57,6 +59,13 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 def health() -> dict[str, str]:
     """Liveness: o processo está de pé e respondendo."""
     return {"status": "ok", "service": settings.app_name}
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics(db=Depends(get_db)) -> PlainTextResponse:
+    """Métricas Prometheus. Em produção, o proxy bloqueia esta rota na borda;
+    o scrape acontece pela rede interna do compose."""
+    return PlainTextResponse(render_metrics(db), media_type="text/plain; version=0.0.4")
 
 
 @app.get("/health/ready", tags=["health"])

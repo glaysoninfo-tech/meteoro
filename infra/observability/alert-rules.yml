@@ -1,0 +1,58 @@
+groups:
+  - name: meteoro-operacao
+    rules:
+      - alert: ApiFora
+        expr: up{job="meteoro-api"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "API do Meteoro fora do ar"
+          description: "O Prometheus não consegue coletar métricas da API há 2 minutos."
+
+      - alert: PlataformaNaoPronta
+        expr: meteoro_ready == 0
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "Dependência crítica indisponível (banco/storage/redis)"
+          description: "O /health/ready está reportando falha há 5 minutos. Componente: verifique meteoro_component_ok."
+
+      # A regra que pega pipeline parado com painel aparentemente normal:
+      - alert: FonteCriticaParada
+        expr: meteoro_source_staleness_seconds{criticality=~"high|medium"} > 7200
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: "Fonte {{ $labels.source_name }} sem coleta há mais de 2h"
+          description: "Idade atual: {{ $value | humanizeDuration }}. Verifique worker, Redis e o conector."
+
+      - alert: FonteSecundariaParada
+        expr: meteoro_source_staleness_seconds > 21600
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "Fonte {{ $labels.source_name }} sem coleta há mais de 6h"
+
+      - alert: WorkerSemHeartbeat
+        expr: meteoro_worker_heartbeat_age_seconds > 600 or meteoro_worker_queue_available == 0
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: "Worker de ingestão parado ou Redis indisponível"
+          description: "Coletas agendadas não estão sendo processadas."
+
+      # Teria detectado sozinho a inundação de timestamp_future:
+      - alert: FilaQualidadeAnomala
+        expr: meteoro_quality_issues_pending > 100
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "Fila de qualidade com {{ $value }} itens pendentes"
+          description: "Crescimento anômalo sugere problema sistêmico de parsing ou fonte defeituosa, não erro pontual de medição."
+
+      - alert: FilaDeJobsAcumulando
+        expr: meteoro_worker_queued_jobs > 50
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $value }} jobs de coleta acumulados na fila"

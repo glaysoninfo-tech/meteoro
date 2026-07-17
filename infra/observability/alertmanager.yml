@@ -1,0 +1,29 @@
+# Roteamento de alertas. Configure UM canal que a equipe realmente veja.
+# Opção A (e-mail institucional): preencha o bloco smtp abaixo.
+# Opção B (Telegram/Slack/Discord): use receivers com webhook_configs.
+
+global:
+  resolve_timeout: 5m
+  # smtp_smarthost: "smtp.orgao.gov.br:587"
+  # smtp_from: "meteoro-alertas@orgao.gov.br"
+  # smtp_auth_username: "meteoro-alertas@orgao.gov.br"
+  # smtp_auth_password: "PREENCHER"
+
+route:
+  receiver: equipe-operacao
+  group_by: [alertname]
+  group_wait: 1m
+  group_interval: 10m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: equipe-operacao
+      repeat_interval: 1h
+
+receivers:
+  - name: equipe-operacao
+    # Descomente e preencha o canal escolhido:
+    # email_configs:
+    #   - to: "defesacivil@orgao.gov.br"
+    # webhook_configs:
+    #   - url: "https://api.telegram.org/botTOKEN/sendMessage?chat_id=CHAT&text={{ .CommonAnnotations.summary }}"
