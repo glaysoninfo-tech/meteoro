@@ -10,9 +10,10 @@
     <link rel="stylesheet" href="/portal/operations.css" />
     <link rel="stylesheet" href="/portal/modules.css" />
     <link rel="stylesheet" href="/portal/reports.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="/portal/vendor/leaflet/leaflet.css" />
   </head>
   <body>
+    <div id="api-banner" hidden role="alert" style="background:#7f1d1d;color:#fff;text-align:center;padding:.55rem .8rem;font-weight:600;"></div>
     <header>
       <a class="brand" href="#public">Meteoro <span>Clima</span></a>
       <nav><a href="#public">Público</a><a href="#modules">Módulos</a><a href="#operacao">Operação</a></nav>
@@ -41,9 +42,9 @@
         <button id="logout-button" type="button" hidden>Sair da sessão</button>
         <p id="operation-state" class="muted">Entre para visualizar a situação, o mapa, as filas e a saúde dos conectores.</p>
         <div id="operation-data" class="metrics" hidden>
-          <article><strong id="runs">–</strong><span>execuções recentes</span></article>
-          <article><strong id="sources">–</strong><span>conectores monitorados</span></article>
-          <article><strong id="worker">–</strong><span>jobs na fila</span></article>
+          <article><strong id="metric-quality">–</strong><span>dados aguardando revisão</span></article>
+          <article><strong id="metric-stations">–</strong><span>estações cadastradas</span></article>
+          <article><strong id="metric-protocols">–</strong><span>protocolos pendentes</span></article>
         </div>
         <div id="run-list" class="list" hidden></div>
         <section id="municipal-map-panel" class="aviation" hidden aria-labelledby="municipal-map-title">
@@ -82,8 +83,8 @@
       </section>
     </main>
     <footer>Dados públicos são informativos. Em emergência, siga as orientações oficiais da Defesa Civil.</footer>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    <script src="/portal/vendor/leaflet/leaflet.js"></script>
+    <script src="/portal/vendor/leaflet-heat.js"></script>
     <script src="/portal/app.js"></script>
   </body>
 </html>

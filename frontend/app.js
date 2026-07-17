@@ -12,8 +12,26 @@ let municipalMap = null;
 let municipalLayers = {};
 let latestOperationalMap = null;
 
+function setApiBanner(message) {
+  const banner = byId("api-banner");
+  if (!banner) return;
+  banner.hidden = !message;
+  banner.textContent = message || "";
+}
 async function request(path, options = {}) {
-  const response = await fetch(`${api}${path}`, options);
+  let response;
+  try {
+    response = await fetch(`${api}${path}`, options);
+  } catch (networkError) {
+    setApiBanner("API indisponível no momento — verifique o servidor. Dados exibidos podem estar desatualizados.");
+    throw new Error("Sem conexão com a API.");
+  }
+  const cachedAt = response.headers.get("X-Meteoro-Cached-At");
+  if (cachedAt) {
+    setApiBanner(`Sem conexão com a API — exibindo dados guardados de ${new Date(cachedAt).toLocaleString("pt-BR")}.`);
+  } else {
+    setApiBanner(null);
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.detail || "Não foi possível concluir a solicitação.");
   return data;
@@ -42,12 +60,9 @@ async function loadOperation(token) {
     request("/incidents/reports?triage_status=pending", { headers: auth }),
     request("/alerts/protocol-activations?status=pending_approval", { headers: auth })
   ]);
-  byId("runs").textContent = situation.pending_quality_issues;
-  byId("sources").textContent = situation.stations_total;
-  byId("worker").textContent = situation.pending_protocol_approvals;
-  byId("runs").parentElement.querySelector("span").textContent = "dados aguardando revisão";
-  byId("sources").parentElement.querySelector("span").textContent = "estações cadastradas";
-  byId("worker").parentElement.querySelector("span").textContent = "protocolos pendentes";
+  byId("metric-quality").textContent = situation.pending_quality_issues;
+  byId("metric-stations").textContent = situation.stations_total;
+  byId("metric-protocols").textContent = situation.pending_protocol_approvals;
   byId("run-list").innerHTML = runs.slice(0, 8).map((r) => `<article><span>${r.status} · ${r.trigger_type}</span><small>${r.records_accepted} aceitos · ${r.records_deduplicated} deduplicados</small></article>`).join("");
   byId("operation-data").hidden = false; byId("run-list").hidden = false;
   // Painéis precisam estar visíveis ANTES de renderizar os mapas: o Leaflet

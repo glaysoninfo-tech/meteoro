@@ -21,12 +21,13 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "geolocation=(), camera=(), microphone=()",
 }
 
-# CSP do portal: permite Leaflet via unpkg e tiles/imagens externas enquanto as
-# bibliotecas não são vendorizadas (Etapa C10b aperta esta política).
+# CSP do portal (bibliotecas vendorizadas na Etapa C10b): scripts só da
+# própria origem; imagens externas permanecem liberadas para tiles OSM e
+# camadas REDEMET.
 PORTAL_CSP = (
     "default-src 'self'; "
-    "script-src 'self' https://unpkg.com; "
-    "style-src 'self' https://unpkg.com 'unsafe-inline'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob: https:; "
     "connect-src 'self'; "
     "worker-src 'self'; "
