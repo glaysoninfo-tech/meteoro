@@ -216,7 +216,9 @@ class IngestionWorker:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    from app.core.logging import configure_logging
+
+    configure_logging()
     IngestionWorker().run_forever()
 
 

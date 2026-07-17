@@ -1,12 +1,20 @@
+import logging
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.health import readiness_report
+from app.core.logging import configure_logging
+from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
+from app.core.request_context import get_request_id
 from app.core.settings import settings
+
+configure_logging()
+error_logger = logging.getLogger("meteoro.error")
 
 _is_production = settings.environment.strip().lower() == "production"
 
@@ -18,6 +26,29 @@ app = FastAPI(
     redoc_url=None if _is_production else "/redoc",
     openapi_url=None if _is_production else "/openapi.json",
 )
+
+# Ordem efetiva de execução: RequestContext -> SecurityHeaders -> GZip -> rotas.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestContextMiddleware)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Nunca vaza stacktrace ao cliente; registra com request_id para correlação."""
+    error_logger.error(
+        "Exceção não tratada em %s %s",
+        request.method,
+        request.url.path,
+        exc_info=exc,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Erro interno do servidor. O evento foi registrado.",
+            "request_id": get_request_id(),
+        },
+    )
 
 
 @app.get("/health", tags=["health"])
