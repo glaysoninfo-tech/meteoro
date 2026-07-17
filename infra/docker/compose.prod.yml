@@ -118,6 +118,30 @@ services:
       disable: true
     logging: *default-logging
 
+  backup:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/opt/meteoro/backup.sh"]
+    environment:
+      PGHOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-meteoro}
+      POSTGRES_USER: ${POSTGRES_USER:-meteoro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-02}
+    volumes:
+      - ./backup.sh:/opt/meteoro/backup.sh:ro
+      # Aponte BACKUP_DIR para disco secundário ou NAS — nunca o mesmo disco do banco.
+      - ${BACKUP_DIR:-./backups}:/backups
+      - raw-data:/raw:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+    healthcheck:
+      disable: true
+    logging: *default-logging
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
