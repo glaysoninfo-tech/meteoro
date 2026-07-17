@@ -121,6 +121,32 @@ function reportPeriodQuery() {
   const start = new Date(end.getTime() - hours * 60 * 60 * 1000);
   return `period_start_utc=${encodeURIComponent(start.toISOString())}&period_end_utc=${encodeURIComponent(end.toISOString())}`;
 }
+const FORECAST_LABELS = {
+  temperature_c: "Temperatura",
+  humidity_pct: "Umidade relativa",
+  rainfall_mm_1h: "Chuva (1 h)",
+  wind_speed_mps: "Vento",
+};
+const RISK_LABELS = { normal: "normal", elevated: "elevado", high: "alto", critical: "crítico" };
+function formatForecastValue(variableCode, value) {
+  if (value === null || value === undefined) return "n/d";
+  const units = { temperature_c: "°C", humidity_pct: "%", rainfall_mm_1h: "mm", wind_speed_mps: "m/s" };
+  const decimals = variableCode === "humidity_pct" ? 0 : 1;
+  return `${Number(value).toFixed(decimals)} ${units[variableCode] || ""}`.trim();
+}
+function renderForecastTables(series) {
+  if (!Array.isArray(series) || !series.length) return "<p class='muted'>Sem séries previstas.</p>";
+  return series.map((item) => {
+    const label = FORECAST_LABELS[item.variable_code] || item.variable_code;
+    const trend = item.trend_per_hour > 0.005 ? "em elevação" : item.trend_per_hour < -0.005 ? "em queda" : "estável";
+    const rows = (item.points || []).map((point) => {
+      const risk = RISK_LABELS[point.risk_level] || point.risk_level;
+      const riskAttention = point.risk_level !== "normal";
+      return `<tr${riskAttention ? " class='forecast-risk'" : ""}><td>${new Date(point.valid_at_utc).toLocaleString("pt-BR", {weekday:"short", hour:"2-digit", minute:"2-digit"})}</td><td>${formatForecastValue(item.variable_code, point.predicted_value)}</td><td>${escapeHtml(risk)}</td><td>${point.confidence_score}%</td></tr>`;
+    }).join("");
+    return `<section class="forecast-block"><h5>${escapeHtml(label)} <small>(${escapeHtml(trend)} · ${item.sample_count} amostras · base ${formatForecastValue(item.variable_code, item.base_value)})</small></h5><table class="forecast-table"><thead><tr><th>Válido para</th><th>Previsto</th><th>Risco</th><th>Confiança</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  }).join("");
+}
 async function generateReport() {
   if (!operationalToken) return;
   const auth = {Authorization:`Bearer ${operationalToken}`};
@@ -132,7 +158,7 @@ async function generateReport() {
       const horizon = Math.min(168, Math.max(1, Number(byId("report-hours").value) || 24));
       const step = Math.min(24, Math.max(1, Number(byId("report-step").value) || 6));
       result = await request(`/meteorology/forecast?horizon_hours=${horizon}&step_hours=${Math.min(step,horizon)}`, {headers:auth});
-      byId("report-result").innerHTML = `<article><h4>Previsão para ${result.horizon_hours}h</h4><p>${escapeHtml(result.summary)}</p><code>${escapeHtml(JSON.stringify(result.series, null, 2))}</code></article>`;
+      byId("report-result").innerHTML = `<article><h4>Previsão para ${result.horizon_hours}h</h4><p>${escapeHtml(result.summary)}</p>${renderForecastTables(result.series)}</article>`;
     } else if (kind === "committee") {
       result = await request(`/planning/committee/climate-report?${reportPeriodQuery()}`, {headers:auth});
       byId("report-result").innerHTML = `<article><h4>Relatório climático do Gabinete</h4><p>${escapeHtml(result.executive_summary)}</p><p>Observações consideradas: <strong>${result.observations_considered}</strong> · alertas por limiar: <strong>${result.alerts.length}</strong></p></article>`;
