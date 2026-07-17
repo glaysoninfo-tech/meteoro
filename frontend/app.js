@@ -209,8 +209,8 @@ window.addEventListener("hashchange", () => {
   if (location.hash.includes("operacao/monitoramento")) {
     setTimeout(() => { municipalMap?.invalidateSize({pan:false, animate:false}); resizeAviationMap(); }, 160);
   }
-  if (location.hash.includes("public/situacao")) {
-    setTimeout(() => publicMap?.invalidateSize({pan:false, animate:false}), 160);
+  if (location.hash.includes("public/situacao") || location.hash === "" || location.hash === "#public") {
+    setTimeout(() => { if (publicMap) publicMap.invalidateSize({pan:false, animate:false}); else loadPublicMap(); }, 160);
   }
 });
 
@@ -235,8 +235,13 @@ async function loadPublicMap() {
     territories.forEach((territory) => {
       const emAlerta = alertedCodes.has(territory.territory_code);
       const layer = L.geoJSON(territory.geometry_geojson, {
-        style: {color: emAlerta ? "#dc2626" : "#0f766e", weight: 2, fillOpacity: emAlerta ? 0.18 : 0.06},
+        style: {color: emAlerta ? "#dc2626" : "#0f766e", weight: 3, fillOpacity: emAlerta ? 0.25 : 0.14},
       }).bindPopup(`<strong>${escapeHtml(territory.territory_name)}</strong><br>${escapeHtml(territory.territory_type)}${emAlerta ? "<br><strong>⚠ Alerta oficial vigente</strong>" : ""}`).addTo(publicMap);
+      try {
+        const center = layer.getBounds().getCenter();
+        const label = L.marker(center, {icon: L.divIcon({className:"territory-label", html:`<span>${escapeHtml(territory.territory_name)}${emAlerta ? " ⚠" : ""}</span>`, iconSize:null})}).addTo(publicMap);
+        publicMapLayers.push(label);
+      } catch (error) { /* geometria sem bounds válidos */ }
       publicMapLayers.push(layer);
     });
     if (publicMapLayers.length) {

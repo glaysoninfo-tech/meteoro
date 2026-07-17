@@ -41,7 +41,11 @@
 /* Símbolos das camadas oficiais no mapa */
 .map-symbol span{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #075c67;font-size:14px;line-height:1}
 .map-symbol-rain span{border-color:#168aad;color:#168aad}
+.map-symbol-river span{border-color:#0e7490;color:#0e7490}
 .map-symbol-fire span{border-color:#b91c1c;color:#b91c1c}
+
+/* Rótulo do território no mapa público */
+.territory-label span{display:inline-block;transform:translate(-50%,-50%);background:#fffffff0;border:1px solid #b7d6cf;border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:800;color:#073b4c;white-space:nowrap;box-shadow:0 2px 8px #073b4c22}
 
 .module-soon{display:block;margin-top:.4rem;font-size:.82rem;color:#8a6d3b}
 
