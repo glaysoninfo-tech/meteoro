@@ -21,6 +21,22 @@ from app.modules.identity.schemas import CurrentUser
 router = APIRouter()
 
 
+@router.get("/official-layers")
+def get_official_layers(
+    current_user: CurrentUser = Depends(
+        require_roles("admin_general", "operator", "analyst", "auditor")
+    ),
+) -> dict:
+    """Camadas de referência de fontes oficiais (ANA, CEMADEN, INPE).
+
+    Busca ao vivo com cache de 10 minutos; cada camada reporta disponibilidade
+    individual — indisponibilidade externa não derruba o mapa.
+    """
+    from app.modules.geospatial.official_layers import official_layers
+
+    return official_layers()
+
+
 @router.get("/territories", response_model=list[TerritoryOut])
 def list_territories(
     current_user: CurrentUser = Depends(require_roles("admin_general", "operator", "analyst", "auditor")),

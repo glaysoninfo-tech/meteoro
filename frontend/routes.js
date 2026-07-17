@@ -27,13 +27,38 @@ function renderPublicTabs(active) {
   document.querySelectorAll("[data-public-route]").forEach((panel) => { panel.hidden = panel.dataset.publicRoute !== active; });
   if (active === "situacao" && typeof resizeAviationMap === "function") resizeAviationMap();
 }
+// Destino real de cada módulo: [rota, id do painel funcional]. Módulos sem
+// painel dedicado ainda recebem aviso honesto em vez de link circular.
+const MODULE_TARGETS = {
+  "meteorologia-e-clima": ["monitoramento", "aviation-panel"],
+  "meio-ambiente": ["monitoramento", "municipal-map-panel"],
+  "estacoes-e-sensores": ["monitoramento", "municipal-map-panel"],
+  "qualidade-dos-dados": ["monitoramento", "quality-panel"],
+  "ingestao": ["visao-geral", "run-list"],
+  "series-temporais": ["planejamento", "reports-panel"],
+  "alertas-oficiais": ["monitoramento", "municipal-map-panel"],
+  "ocorrencias-e-incidentes": ["resposta", "operational-queues"],
+  "protocolos": ["resposta", "operational-queues"],
+  "recomendacoes": ["resposta", "operational-queues"],
+  "defesa-civil": ["resposta", "operational-queues"],
+  "relatorios": ["planejamento", "reports-panel"],
+  "gabinete": ["planejamento", "reports-panel"],
+  "operacoes": ["visao-geral", "operation-data"],
+  "painel-executivo": ["planejamento", "reports-panel"],
+  "indicadores": ["visao-geral", "operation-data"],
+};
+function moduleActionMarkup(name) {
+  const target = MODULE_TARGETS[portalSlug(name)];
+  if (target) return `<a class="module-route" href="#operacao/${target[0]}/${target[1]}">Abrir painel</a>`;
+  return `<em class="module-soon">Interface dedicada em desenvolvimento — operações via API documentada.</em>`;
+}
 function renderOperationalRoute(active) {
   const route = operationalRoutes.find(([id]) => id === active) || operationalRoutes[0];
   activeOperationalRoute = route[0];
   byId("operational-tabs").innerHTML = operationalRoutes.map(([id, label]) => `<a href="#operacao/${id}" aria-current="${id === route[0] ? "page" : "false"}">${label}</a>`).join("");
   byId("operational-route-summary").innerHTML = `<p class="eyebrow">${escapeHtml(route[1])}</p><h3>${escapeHtml(route[2])}</h3><div class="module-pills">${route[3].map((name) => `<a href="#operacao/${route[0]}/${portalSlug(name)}">${escapeHtml(name)}</a>`).join("")}</div>`;
   document.querySelectorAll("[data-operational-group]").forEach((panel) => { panel.hidden = !operationalToken || panel.dataset.operationalGroup !== route[0]; });
-  byId("module-workspace").innerHTML = route[3].map((name) => `<article id="${portalSlug(name)}"><h3>${escapeHtml(name)}</h3><p>${moduleDescription(name)}</p><a class="module-route" href="#operacao/${route[0]}/${portalSlug(name)}">Acessar área</a></article>`).join("");
+  byId("module-workspace").innerHTML = route[3].map((name) => `<article id="${portalSlug(name)}"><h3>${escapeHtml(name)}</h3><p>${moduleDescription(name)}</p>${moduleActionMarkup(name)}</article>`).join("");
 }
 function syncPortalRoute() {
   const parts = location.hash.replace(/^#/, "").split("/");

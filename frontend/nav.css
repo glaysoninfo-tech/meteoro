@@ -37,4 +37,6 @@
 .map-symbol-rain span{border-color:#168aad;color:#168aad}
 .map-symbol-fire span{border-color:#b91c1c;color:#b91c1c}
 
+.module-soon{display:block;margin-top:.4rem;font-size:.82rem;color:#8a6d3b}
+
 @media(max-width:640px){.route-tabs{gap:4px}.route-tabs a{padding:7px 10px;font-size:.82rem}}
