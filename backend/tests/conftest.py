@@ -35,6 +35,9 @@ def isolated_runtime_settings(tmp_path, monkeypatch: pytest.MonkeyPatch) -> Gene
     monkeypatch.setattr(settings, "ingestion_http_allowed_schemes", "https")
     monkeypatch.setattr(settings, "ingestion_s3_allowed_buckets", "meteoro-test-bucket")
     monkeypatch.setattr(settings, "ingestion_scheduler_enabled", False)
+    # Desligado por padrão para não interferir nos demais testes;
+    # tests/test_rate_limit.py o reativa explicitamente.
+    monkeypatch.setattr(settings, "public_rate_limit_enabled", False)
     yield
 
 

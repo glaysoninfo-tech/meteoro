@@ -10,6 +10,7 @@ from app.api.router import api_router
 from app.core.health import readiness_report
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
+from app.core.ratelimit import PublicRateLimitMiddleware
 from app.core.request_context import get_request_id
 from app.core.settings import settings
 
@@ -27,8 +28,9 @@ app = FastAPI(
     openapi_url=None if _is_production else "/openapi.json",
 )
 
-# Ordem efetiva de execução: RequestContext -> SecurityHeaders -> GZip -> rotas.
+# Ordem efetiva de execução: RequestContext -> SecurityHeaders -> RateLimit -> GZip -> rotas.
 app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.add_middleware(PublicRateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestContextMiddleware)
 

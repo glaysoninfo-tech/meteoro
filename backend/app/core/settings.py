@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     ingestion_worker_poll_seconds: int = 5
     ingestion_worker_lock_ttl_seconds: int = 300
     public_organization_id: str | None = None
+    # Rate limit por IP dos endpoints públicos (janela fixa de 60 s).
+    public_rate_limit_enabled: bool = True
+    public_rate_limit_per_minute: int = 120
+    public_csv_rate_limit_per_minute: int = 10
     # Usados por app/core/health.py (readiness_report) — Etapa 5 do plano.
     readiness_require_redis: bool = False
     readiness_redis_timeout_seconds: float = 2.0
