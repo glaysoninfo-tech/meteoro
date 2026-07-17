@@ -1,0 +1,9 @@
+{
+  "name": "Meteoro Clima",
+  "short_name": "Meteoro",
+  "start_url": "/portal/",
+  "scope": "/portal/",
+  "display": "standalone",
+  "background_color": "#f5f1e8",
+  "theme_color": "#073b4c"
+}

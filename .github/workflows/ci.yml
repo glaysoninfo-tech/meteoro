@@ -1,0 +1,84 @@
+name: backend-ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan de segredos (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: meteoro_ci
+          POSTGRES_USER: meteoro
+          POSTGRES_PASSWORD: meteoro
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U meteoro -d meteoro_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://meteoro:meteoro@localhost:5432/meteoro_ci
+      AUTH_MODE: local
+      JWT_SECRET_KEY: ci-only-secret-not-for-production
+      INGESTION_NETWORK_ALLOWED_HOSTS: api.example.org
+      INGESTION_NETWORK_ALLOWED_PORTS: "443,1883,4840"
+      INGESTION_HTTP_ALLOWED_SCHEMES: https
+      INGESTION_S3_ALLOWED_BUCKETS: meteoro-ci-bucket
+      INGESTION_SCHEDULER_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: Static analysis
+        working-directory: backend
+        run: ruff check app tests
+
+      - name: Ensure single Alembic head
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          from alembic.config import Config
+          from alembic.script import ScriptDirectory
+
+          script = ScriptDirectory.from_config(Config("alembic.ini"))
+          heads = script.get_heads()
+          if len(heads) != 1:
+              raise SystemExit(f"ERRO: esperado 1 head de migração, encontrados {len(heads)}: {heads}")
+          print(f"OK: head único ({heads[0]})")
+          PY
+
+      - name: Migrate PostgreSQL/PostGIS schema
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Automated tests
+        working-directory: backend
+        run: pytest -q

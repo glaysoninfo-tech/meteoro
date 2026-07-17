@@ -1,0 +1,2 @@
+# Módulo: qualidade e validação.
+

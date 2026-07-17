@@ -1,0 +1,2 @@
+# Módulo: comunicação e notificações.
+

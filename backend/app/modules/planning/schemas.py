@@ -1,0 +1,83 @@
+from datetime import datetime
+
+from pydantic import BaseModel, Field
+
+
+class QualityDistribution(BaseModel):
+    valid: int = Field(ge=0)
+    suspect: int = Field(ge=0)
+    rejected: int = Field(ge=0)
+
+
+class SourceCoverageSummary(BaseModel):
+    source_id: str
+    sample_count: int = Field(ge=0)
+    last_observed_at_utc: datetime | None = None
+
+
+class VariableTrendSummary(BaseModel):
+    variable_code: str
+    unit: str
+    sample_count: int = Field(ge=0)
+    valid_sample_count: int = Field(ge=0)
+    min_value: float | None = None
+    max_value: float | None = None
+    average_value: float | None = None
+    first_value: float | None = None
+    last_value: float | None = None
+    trend_delta: float | None = None
+    trend_direction: str
+
+
+class ClimateAlert(BaseModel):
+    alert_code: str
+    severity: str
+    variable_code: str
+    source_id: str
+    observed_at_utc: datetime
+    location_code: str | None = None
+    value: float
+    unit: str
+    threshold: float
+    description: str
+
+
+class CommitteeClimateReport(BaseModel):
+    generated_at_utc: datetime
+    organization_id: str
+    period_start_utc: datetime
+    period_end_utc: datetime
+    source_scope: list[str]
+    observations_considered: int = Field(ge=0)
+    quality_distribution: QualityDistribution
+    source_coverage: list[SourceCoverageSummary]
+    trend_summaries: list[VariableTrendSummary]
+    alerts: list[ClimateAlert]
+    executive_summary: str
+
+
+class StationAvailabilityItem(BaseModel):
+    station_id: str
+    station_code: str
+    station_name: str
+    station_type: str
+    station_status: str
+    sensor_count: int = Field(ge=0)
+    observation_count: int = Field(ge=0)
+    valid_observation_count: int = Field(ge=0)
+    suspect_observation_count: int = Field(ge=0)
+    rejected_observation_count: int = Field(ge=0)
+    expected_observation_count: int | None = Field(default=None, ge=0)
+    completeness_percent: float | None = Field(default=None, ge=0, le=100)
+    last_observed_at_utc: datetime | None = None
+    health_status: str
+    variables: list[str]
+
+
+class StationAvailabilityReport(BaseModel):
+    generated_at_utc: datetime
+    organization_id: str
+    period_start_utc: datetime
+    period_end_utc: datetime
+    stations: list[StationAvailabilityItem]
+    summary: str
