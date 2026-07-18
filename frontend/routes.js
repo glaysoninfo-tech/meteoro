@@ -48,10 +48,26 @@ const MODULE_TARGETS = {
   "indicadores": ["visao-geral", "operation-data"],
   "gabinete": ["visao-geral", "overview-cabinet"],
 };
+// Estado honesto dos módulos ainda sem painel dedicado.
+const MODULE_ROADMAP = {
+  "saude-ambiental": "Planejado — o módulo de saúde ambiental (backend) ainda é um esqueleto sem implementação. Entra na fase pós-piloto.",
+  "assistencia-social": "Planejado — depende de convênio de dados com a Assistência Social; nenhuma implementação iniciada.",
+  "planejamento-e-mitigacao": "Parcial — limiares de risco e relatórios já operam (ver Relatórios); a gestão de ações de mitigação é fase futura.",
+  "catalogo-de-fontes": "Operações via API: POST /catalog/sources e perfis prontos (ANA, REDEMET, Open-Meteo) em /catalog/sources/profiles/*.",
+  "comunicacao-e-campanhas": "Backend implementado (boletins e destinatários via /communications); tela dedicada em fase futura.",
+  "administracao": "Operações via API de identidade (/auth) e auditoria (/audit); tela dedicada em fase futura.",
+  "identidade-e-acesso": "Backend completo (papéis, sessões, Keycloak opcional); administração via API /auth.",
+  "auditoria": "Trilha completa em /audit/events (toda ação relevante é registrada); consulta via API.",
+  "organizacoes": "Multi-organização já suportado no backend; gestão via API.",
+  "documentos": "Planejado — repositório documental entra na fase pós-piloto.",
+  "apis": "Documentação interativa em /docs (fora de produção) e OpenAPI em /openapi.json.",
+};
 function moduleActionMarkup(name) {
-  const target = MODULE_TARGETS[portalSlug(name)];
+  const slug = portalSlug(name);
+  const target = MODULE_TARGETS[slug];
   if (target) return `<a class="module-route" href="#operacao/${target[0]}/${target[1]}">Abrir painel</a>`;
-  return `<em class="module-soon">Interface dedicada em desenvolvimento — operações via API documentada.</em>`;
+  const roadmap = MODULE_ROADMAP[slug] || "Interface dedicada em desenvolvimento — operações via API documentada.";
+  return `<em class="module-soon">${roadmap}</em>`;
 }
 function renderOperationalRoute(active) {
   const route = operationalRoutes.find(([id]) => id === active) || operationalRoutes[0];
