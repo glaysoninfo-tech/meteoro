@@ -10,6 +10,7 @@ Uso (com o uvicorn PARADO, de dentro de backend/):
 
 from __future__ import annotations
 
+import gzip
 import json
 import sqlite3
 import urllib.request
@@ -24,8 +25,13 @@ IBGE_BETIM = (
 
 def main() -> None:
     print("Baixando malha municipal de Betim no IBGE…")
-    with urllib.request.urlopen(IBGE_BETIM, timeout=30) as response:  # noqa: S310
-        payload = json.loads(response.read().decode("utf-8"))
+    request = urllib.request.Request(IBGE_BETIM, headers={"Accept-Encoding": "gzip"})
+    with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+        raw = response.read()
+    # O IBGE responde gzip (bytes 1f 8b) mesmo sem negociação explícita.
+    if raw[:2] == b"\x1f\x8b":
+        raw = gzip.decompress(raw)
+    payload = json.loads(raw.decode("utf-8"))
 
     if payload.get("type") == "FeatureCollection":
         geometry = payload["features"][0]["geometry"]
