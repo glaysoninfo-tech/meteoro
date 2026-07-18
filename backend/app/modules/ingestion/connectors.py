@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection, HTTPSConnection
 import json
 import os
@@ -271,13 +271,27 @@ def _safe_endpoint_reference(endpoint_reference: str) -> str:
     return urlunparse(parsed._replace(query="", fragment=""))
 
 
+def _apply_date_placeholders(endpoint_reference: str) -> str:
+    """Substitui marcadores de data na URL (APIs que exigem período explícito,
+    como a telemetria da ANA que pede DataInicio/DataFim em dd/mm/aaaa)."""
+    now = datetime.now(tz=timezone.utc)
+    yesterday = now - timedelta(days=1)
+    return (
+        endpoint_reference
+        .replace("{DATA_HOJE_BR}", now.strftime("%d/%m/%Y"))
+        .replace("{DATA_ONTEM_BR}", yesterday.strftime("%d/%m/%Y"))
+        .replace("{DATA_HOJE_ISO}", now.strftime("%Y-%m-%d"))
+        .replace("{DATA_ONTEM_ISO}", yesterday.strftime("%Y-%m-%d"))
+    )
+
+
 def _resolve_http_endpoint_for_collection(
     source: SourceModel,
     config: dict[str, Any],
     collection_context: dict[str, str] | None,
 ) -> str:
     if collection_context is None:
-        return source.endpoint_reference
+        return _apply_date_placeholders(source.endpoint_reference)
 
     period_start = collection_context.get("period_start_utc")
     period_end = collection_context.get("period_end_utc")

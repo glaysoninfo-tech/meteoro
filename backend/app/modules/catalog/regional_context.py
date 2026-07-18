@@ -112,6 +112,52 @@ def betim_open_meteo_profiles() -> list[SourceCreate]:
     ]
 
 
+def ana_hidroweb_profiles(station_codes: list[str]) -> list[SourceCreate]:
+    """Telemetria fluviométrica da ANA por código de estação.
+
+    O operador obtém o código na camada 'Réguas fluviométricas (ANA)' do mapa
+    operacional (popup mostra 'Código ANA'). Nível em cm vira river_level_m e
+    alimenta os limiares river_level_high/critical do módulo de planejamento.
+    """
+    profiles: list[SourceCreate] = []
+    for code in station_codes:
+        clean = str(code).strip()
+        if not clean.isdigit() or not (6 <= len(clean) <= 10):
+            raise ValueError(
+                f"Código de estação ANA inválido: '{code}'. Use o código numérico "
+                "exibido no popup da camada de réguas fluviométricas."
+            )
+        config = {
+            "parser": "ana_hidroweb",
+            "station_code": f"ANA_{clean}",
+            "classification": "internal_operational",
+            "purpose": "river_level_monitoring_for_flood_response",
+            "timezone_offset_hours": -3,
+            "timeout_seconds": 25,
+            "retry_attempts": 3,
+            "schedule": {"minute_utc": 20},
+        }
+        profiles.append(
+            SourceCreate(
+                institution_name="ANA / HidroWeb Telemetria",
+                source_name=f"ANA — telemetria fluviométrica {clean}",
+                source_type="hydrology_telemetry",
+                access_method="http",
+                authentication_type="none",
+                endpoint_reference=(
+                    "https://telemetriaws1.ana.gov.br/ServiceANA.asmx/DadosHidrometeorologicos"
+                    f"?CodEstacao={clean}"
+                    "&DataInicio={DATA_ONTEM_BR}&DataFim={DATA_HOJE_BR}"
+                ),
+                connector_config_json=json.dumps(config, ensure_ascii=False),
+                status="active",
+                expected_frequency_minutes=60,
+                criticality="high",
+            )
+        )
+    return profiles
+
+
 def redemet_aviation_profiles() -> list[SourceCreate]:
     """Perfis REDEMET para contexto aeronáutico regional, nunca alerta municipal.
 

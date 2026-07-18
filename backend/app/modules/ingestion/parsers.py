@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import csv
 import json
+import xml.etree.ElementTree as ElementTree
 from io import StringIO
 import re
 from typing import Any
@@ -24,8 +25,11 @@ class ParsedObservation:
 
 
 def parse_source_payload(source: SourceModel, payload: SourcePayload) -> list[ParsedObservation]:
-    records = _load_records(payload=payload, endpoint_reference=source.endpoint_reference)
     parser_name = _resolve_parser_name(source=source)
+    # A telemetria da ANA responde XML; não passa pelo carregador JSON/CSV.
+    if parser_name == "ana_hidroweb":
+        return _parse_ana_hidroweb(payload=payload, source=source)
+    records = _load_records(payload=payload, endpoint_reference=source.endpoint_reference)
 
     if parser_name == "inmet":
         return _parse_inmet(records, source=source)
@@ -57,7 +61,7 @@ def _resolve_parser_name(source: SourceModel) -> str:
     explicit_parser = connector_config.get("parser")
     if explicit_parser in {
         "inmet", "opmet", "semmad", "sentinel", "sensor_stream", "monitorar_feam", "open_meteo",
-        "redemet_status", "redemet_metar", "redemet_imagery", "lightning_geojson",
+        "redemet_status", "redemet_metar", "redemet_imagery", "lightning_geojson", "ana_hidroweb",
     }:
         return explicit_parser
 
@@ -400,6 +404,72 @@ def _parse_open_meteo(records: list[dict[str, Any]], source: SourceModel) -> lis
                         location_code=location,
                     )
                 )
+    return observations
+
+
+def _parse_ana_hidroweb(payload: SourcePayload, source: SourceModel) -> list[ParsedObservation]:
+    """Telemetria fluviométrica da ANA (ServiceANA.asmx/DadosHidrometeorologicos).
+
+    XML com registros DadosHidrometereologicos (grafia oficial do serviço):
+    Nivel em cm (normalizado para river_level_m), Vazao em m³/s e Chuva em mm.
+    DataHora vem no fuso local da estação (Brasília por padrão, -3).
+    """
+    config = _connector_config(source.connector_config_json)
+    location = _configured_location(source) or "ANA_TELEMETRIA"
+    try:
+        offset_hours = float(config.get("timezone_offset_hours", -3))
+    except (TypeError, ValueError):
+        offset_hours = -3.0
+    local_timezone = timezone(timedelta(hours=offset_hours))
+
+    text = payload.content_bytes.decode("utf-8", errors="replace")
+    try:
+        root = ElementTree.fromstring(text)
+    except ElementTree.ParseError:
+        return []
+
+    future_cutoff = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
+    mappings = (
+        ("nivel", "river_level_m", "cm"),
+        ("vazao", "river_flow_m3s", "m3/s"),
+        ("chuva", "rainfall_mm_1h", "mm"),
+    )
+    observations: list[ParsedObservation] = []
+    for element in root.iter():
+        if element.tag.split("}")[-1].lower() != "dadoshidrometereologicos":
+            continue
+        fields = {
+            child.tag.split("}")[-1].lower(): (child.text or "").strip()
+            for child in element
+        }
+        raw_datetime = fields.get("datahora") or fields.get("data")
+        if not raw_datetime:
+            continue
+        try:
+            parsed_local = datetime.fromisoformat(raw_datetime)
+        except ValueError:
+            continue
+        observed_at = parsed_local.replace(tzinfo=local_timezone).astimezone(timezone.utc)
+        if observed_at > future_cutoff:
+            continue
+        for field_name, variable_code, unit in mappings:
+            raw_value = fields.get(field_name, "")
+            if raw_value == "":
+                continue
+            value = _extract_float(
+                {"value": raw_value.replace(",", ".")}, aliases=["value"]
+            )
+            if value is None:
+                continue
+            observations.append(
+                _build_observation(
+                    observed_at=observed_at,
+                    variable_code=variable_code,
+                    value_original=value,
+                    unit_original=unit,
+                    location_code=location,
+                )
+            )
     return observations
 
 

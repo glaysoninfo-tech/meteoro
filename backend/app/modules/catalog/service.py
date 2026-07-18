@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.network_security import validate_connector_endpoint
 from app.modules.catalog.models import SourceModel
 from app.modules.catalog.regional_context import (
+    ana_hidroweb_profiles,
     betim_open_meteo_profiles,
     redemet_aviation_profiles,
     redemet_imagery_profiles,
@@ -113,6 +114,18 @@ class CatalogService:
             db=db,
             organization_id=organization_id,
             profiles=redemet_imagery_profiles(),
+        )
+
+    def install_ana_hidroweb_profiles(
+        self,
+        db: Session,
+        organization_id: str,
+        station_codes: list[str],
+    ) -> list[SourceModel]:
+        return self._install_profiles(
+            db=db,
+            organization_id=organization_id,
+            profiles=ana_hidroweb_profiles(station_codes),
         )
 
     def _install_profiles(

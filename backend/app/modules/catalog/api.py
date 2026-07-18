@@ -8,7 +8,12 @@ from app.modules.identity.dependencies import require_roles
 from app.modules.identity.schemas import CurrentUser
 from app.modules.ingestion.service import ingestion_service
 from app.modules.ingestion.worker import RedisIngestionQueue
-from app.modules.catalog.schemas import SourceCreate, SourceOut, SourceUpdate
+from app.modules.catalog.schemas import (
+    AnaHidrowebInstallRequest,
+    SourceCreate,
+    SourceOut,
+    SourceUpdate,
+)
 from app.modules.catalog.service import catalog_service
 
 router = APIRouter()
@@ -197,6 +202,55 @@ def install_redemet_imagery_sources(
         db=db, module="catalog", action="source.redemet_imagery_profiles_installed",
         actor=current_user.email, organization_id=current_user.organization_id,
         resource_type="source_profile", resource_id="redemet_imagery_betim",
+    )
+    return sources
+
+
+@router.post("/sources/profiles/ana-hidroweb", response_model=list[SourceOut])
+def install_ana_hidroweb_sources(
+    payload: AnaHidrowebInstallRequest,
+    current_user: CurrentUser = Depends(require_roles("admin_general", "operator")),
+    db: Session = Depends(get_db),
+) -> list[SourceOut]:
+    """Instala telemetria fluviométrica da ANA para os códigos informados.
+
+    Alimenta river_level_m/river_flow_m3s e os limiares de cheia do
+    planejamento (river_level_high/critical). Exige o host
+    telemetriaws1.ana.gov.br na allowlist de rede.
+    """
+    try:
+        sources = catalog_service.install_ana_hidroweb_profiles(
+            db=db,
+            organization_id=current_user.organization_id,
+            station_codes=payload.station_codes,
+        )
+        for source in sources:
+            if source.last_success_at is None:
+                try:
+                    job, created = ingestion_service.create_collection_job(
+                        db=db,
+                        organization_id=current_user.organization_id,
+                        source_id=source.source_id,
+                        trigger_type="profile_install",
+                        run_metadata_json=None,
+                        requested_by=current_user.email,
+                    )
+                    if created:
+                        RedisIngestionQueue().enqueue(job.job_id)
+                except (RedisError, ValueError):
+                    # Fonte instalada; coleta ocorre via collect/all ou agendamento.
+                    pass
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    audit_service.create_event(
+        db=db,
+        module="catalog",
+        action="source.ana_hidroweb_profiles_installed",
+        actor=current_user.email,
+        organization_id=current_user.organization_id,
+        resource_type="source_profile",
+        resource_id=f"ana_hidroweb::{','.join(payload.station_codes)}"[:200],
     )
     return sources
 
