@@ -50,7 +50,7 @@ async function loadPublic() {
 
 async function loadOperation(token) {
   const auth = { Authorization: `Bearer ${token}` };
-  const [runs, connectors, worker, situation, mapData, qualityIssues, incidents, activations] = await Promise.all([
+  const [runs, connectors, worker, situation, mapData, qualityIssues, incidents, activations, decisions, publicAlerts] = await Promise.all([
     request("/ingestion/runs/latest", { headers: auth }),
     request("/ingestion/connectors/health", { headers: auth }),
     request("/ingestion/worker/status", { headers: auth }),
@@ -58,11 +58,11 @@ async function loadOperation(token) {
     request("/operations/map", { headers: auth }),
     request("/data-quality/issues", { headers: auth }),
     request("/incidents/reports?triage_status=pending", { headers: auth }),
-    request("/alerts/protocol-activations?status=pending_approval", { headers: auth })
+    request("/alerts/protocol-activations?status=pending_approval", { headers: auth }),
+    request("/planning/cabinet/decisions?status=open", { headers: auth }).catch(() => []),
+    request("/public/alerts").catch(() => [])
   ]);
-  byId("metric-quality").textContent = situation.pending_quality_issues;
-  byId("metric-stations").textContent = situation.stations_total;
-  byId("metric-protocols").textContent = situation.pending_protocol_approvals;
+  renderOverview({situation, connectors, qualityIssues, incidents, activations, decisions, publicAlerts, worker});
   byId("run-list").innerHTML = runs.slice(0, 8).map((r) => `<article><span>${r.status} · ${r.trigger_type}</span><small>${r.records_accepted} aceitos · ${r.records_deduplicated} deduplicados</small></article>`).join("");
   byId("operation-data").hidden = false; byId("run-list").hidden = false;
   // Painéis precisam estar visíveis ANTES de renderizar os mapas: o Leaflet
@@ -80,6 +80,47 @@ async function loadOperation(token) {
   await loadMapLayers(token);
   const attention = situation.platform_state === "attention" ? " Atenção operacional necessária." : "";
   setState("operation-state", (worker.queue_available ? "Painel atualizado." : "API disponível; fila Redis indisponível.") + attention);
+}
+
+// ---------- Visão geral executiva ----------
+const PLATFORM_STATE_LABELS = {normal:"Normal", attention:"Atenção", critical:"Crítico"};
+function renderOverview({situation, connectors, qualityIssues, incidents, activations, decisions, publicAlerts, worker}) {
+  const stateLabel = PLATFORM_STATE_LABELS[situation.platform_state] || situation.platform_state || "–";
+  byId("ov-state").textContent = stateLabel;
+  byId("ov-state").style.color = situation.platform_state === "normal" ? "#16803c" : "#b45309";
+  byId("ov-alerts").textContent = (publicAlerts || []).length;
+  const operational = (connectors || []).filter((c) => c.state === "operational").length;
+  byId("ov-sources").textContent = `${operational}/${(connectors || []).length}`;
+  const abertas = (decisions || []).length;
+  byId("ov-decisions").textContent = abertas;
+
+  // Prioridades: tudo que exige ação humana, com link direto para a fila.
+  const prioridades = [];
+  const add = (count, texto, href, criticidade) => { if (count > 0) prioridades.push({count, texto, href, criticidade}); };
+  add(situation.pending_quality_issues, "dado(s) suspeito(s) aguardando revisão", "#operacao/monitoramento/quality-panel", "media");
+  add((incidents || []).length, "ocorrência(s) aguardando triagem", "#operacao/resposta/operational-queues", "alta");
+  add((activations || []).length, "protocolo(s) aguardando aprovação", "#operacao/resposta/operational-queues", "alta");
+  const agora = Date.now();
+  const vencidas = (decisions || []).filter((d) => d.deadline_utc && new Date(d.deadline_utc).getTime() < agora).length;
+  add(vencidas, "decisão(ões) do Gabinete com prazo vencido", "#operacao/visao-geral/overview-cabinet", "alta");
+  const paradas = (connectors || []).filter((c) => c.state === "stale").length;
+  add(paradas, "fonte(s) com coleta atrasada", "#operacao/monitoramento/municipal-map-panel", "media");
+  if (!worker.queue_available) prioridades.push({count:"!", texto:"fila Redis indisponível — coletas agendadas paradas", href:"#operacao/visao-geral/runs-details", criticidade:"alta"});
+
+  byId("priority-list").innerHTML = prioridades.length
+    ? prioridades.map((p) => `<li class="priority-${p.criticidade}"><a href="${p.href}"><strong>${p.count}</strong> ${escapeHtml(p.texto)} →</a></li>`).join("")
+    : "<li class='priority-ok'>Nenhuma pendência operacional no momento.</li>";
+  byId("overview-priorities").hidden = false;
+
+  // Decisões do Gabinete em aberto.
+  byId("cabinet-list").innerHTML = abertas
+    ? (decisions || []).slice(0, 6).map((d) => {
+        const prazo = d.deadline_utc ? new Date(d.deadline_utc) : null;
+        const vencida = prazo && prazo.getTime() < agora;
+        return `<p><strong>${escapeHtml(d.territory)}</strong> · ${escapeHtml(d.responsible_role)}<br><small>${escapeHtml(d.decision).slice(0, 120)}</small><br><small class="${vencida ? "deadline-overdue" : ""}">${prazo ? `Prazo: ${prazo.toLocaleString("pt-BR")}${vencida ? " — VENCIDO" : ""}` : "Sem prazo definido"}</small></p>`;
+      }).join("")
+    : "<p class='muted'>Nenhuma decisão em aberto. Registre decisões via POST /api/v1/planning/cabinet/decisions.</p>";
+  byId("overview-cabinet").hidden = false;
 }
 
 function initMunicipalMap() {

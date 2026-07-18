@@ -43,9 +43,10 @@ const MODULE_TARGETS = {
   "defesa-civil": ["resposta", "operational-queues"],
   "relatorios": ["planejamento", "reports-panel"],
   "gabinete": ["planejamento", "reports-panel"],
-  "operacoes": ["visao-geral", "operation-data"],
+  "operacoes": ["visao-geral", "overview-priorities"],
   "painel-executivo": ["planejamento", "reports-panel"],
   "indicadores": ["visao-geral", "operation-data"],
+  "gabinete": ["visao-geral", "overview-cabinet"],
 };
 function moduleActionMarkup(name) {
   const target = MODULE_TARGETS[portalSlug(name)];

@@ -123,12 +123,25 @@
 
         <div data-operational-group="visao-geral" hidden>
           <div id="operation-data" class="metrics" hidden>
-            <article><strong id="metric-quality">–</strong><span>dados aguardando revisão</span></article>
-            <article><strong id="metric-stations">–</strong><span>estações cadastradas</span></article>
-            <article><strong id="metric-protocols">–</strong><span>protocolos pendentes</span></article>
+            <article><strong id="ov-state">–</strong><span>estado da plataforma</span></article>
+            <article><strong id="ov-alerts">–</strong><span>alertas oficiais vigentes</span></article>
+            <article><strong id="ov-sources">–</strong><span>fontes operacionais</span></article>
+            <article><strong id="ov-decisions">–</strong><span>decisões do Gabinete abertas</span></article>
           </div>
-          <p class="eyebrow">EXECUÇÕES RECENTES DE INGESTÃO</p>
-          <div id="run-list" class="list" hidden></div>
+          <section id="overview-priorities" hidden aria-labelledby="priorities-title">
+            <p class="eyebrow">PRIORIDADES AGORA</p>
+            <h3 id="priorities-title" class="visually-hidden">Pendências que exigem ação</h3>
+            <ul id="priority-list" class="priority-list"></ul>
+          </section>
+          <section id="overview-cabinet" hidden aria-labelledby="cabinet-title">
+            <p class="eyebrow">GABINETE — DECISÕES EM ABERTO</p>
+            <h3 id="cabinet-title" class="visually-hidden">Decisões registradas aguardando conclusão</h3>
+            <div id="cabinet-list" class="queue-list"></div>
+          </section>
+          <details id="runs-details" class="runs-details">
+            <summary>Execuções recentes de ingestão (detalhe técnico)</summary>
+            <div id="run-list" class="list" hidden></div>
+          </details>
         </div>
 
         <div data-operational-group="monitoramento" hidden>
