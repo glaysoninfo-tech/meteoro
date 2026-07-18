@@ -29,10 +29,14 @@ function renderOfficialLayers() {
     (p) => `<strong>${escapeHtml(p.NORIOCOMP || p.NOGENERICO || "Curso d'água")}</strong><br>Fonte: ANA / SNIRH`);
   add("rain_gauges", document.getElementById("layer-rain-gauges").checked, latestOfficialLayers.rain_gauges,
     {pointToLayer:(f, ll) => L.marker(ll,{icon:mapSymbolIcon("☂", "rain", "Estação pluviométrica")})},
-    (p) => `<strong>${escapeHtml(p.nomeestacao || "Estação pluviométrica")}</strong><br>${escapeHtml(p.cidade || "Região de Betim")}<br>Acumulado informado: ${escapeHtml(p.acumulado ?? "não informado")}<br>Fonte: CEMADEN`);
+    (p) => `<strong>${escapeHtml(p.nomeestacao || "Estação pluviométrica")}</strong><br>${escapeHtml(p.cidade || "Região de Betim")}<br><strong>Chuva acumulada: ${escapeHtml(String(p.acumulado ?? "n/d"))} mm</strong>${p.data ? `<br>Medição de: ${escapeHtml(String(p.data))}` : ""}<br>Fonte: CEMADEN`);
   add("river_gauges", document.getElementById("layer-river-gauges").checked, latestOfficialLayers.river_gauges,
     {pointToLayer:(f, ll) => L.marker(ll,{icon:mapSymbolIcon("≋", "river", "Estação fluviométrica")})},
-    (p) => `<strong>${escapeHtml(p.Nome || "Estação fluviométrica")}</strong><br>Rio: ${escapeHtml(p.Rio || "não informado")}<br>${escapeHtml(p.Municipio || "")}<br>Fonte: ANA / SNIRH`);
+    (p) => {
+      const telemetrica = String(p.EstacaoTelemetrica ?? "").toLowerCase();
+      const temTelemetria = telemetrica === "sim" || telemetrica === "true" || telemetrica === "1";
+      return `<strong>${escapeHtml(p.Nome || "Estação fluviométrica")}</strong><br>Rio: ${escapeHtml(p.Rio || "não informado")} · ${escapeHtml(p.Municipio || "")}<br>Código ANA: ${escapeHtml(String(p.Codigo ?? "n/d"))} · ${p.Operando === "Sim" || p.Operando === true ? "em operação" : "situação: " + escapeHtml(String(p.Operando ?? "n/d"))}<br>${temTelemetria ? "<strong>📡 Telemétrica — transmite nível em tempo quase real</strong><br><em>Integração de nível d'água: próximo conector planejado</em>" : "Medição convencional (leitura manual)"}<br>Fonte: ANA / SNIRH`;
+    });
   add("fire_hotspots", document.getElementById("layer-fire-hotspots").checked, latestOfficialLayers.fire_hotspots,
     {pointToLayer:(f, ll) => L.marker(ll,{icon:mapSymbolIcon("▲", "fire", "Foco de calor")})},
     (p) => `<strong>Foco de calor</strong><br>${escapeHtml(p.data_hora_gmt || p.data || "Últimas 24 horas")}<br>Fonte: INPE`);
