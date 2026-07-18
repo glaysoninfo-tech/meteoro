@@ -114,6 +114,54 @@ def betim_open_meteo_profiles() -> list[SourceCreate]:
     ]
 
 
+# Estações automáticas do INMET mais próximas de Betim. O município não possui
+# estação automática própria do INMET; estas são as vizinhas imediatas da
+# região metropolitana — observação REGIONAL, nunca "medição de bairro de Betim".
+INMET_REGIONAL_STATIONS: tuple[tuple[str, str], ...] = (
+    ("A555", "Ibirité — Rola-Moça"),
+    ("A521", "Belo Horizonte — Pampulha"),
+    ("A537", "Belo Horizonte — Cercadinho"),
+    ("A535", "Florestal"),
+)
+
+
+def inmet_regional_stations_profiles() -> list[SourceCreate]:
+    """Observação horária real das estações automáticas INMET vizinhas.
+
+    classification=public: alimentam os cartões públicos como 'Observação',
+    complementando a estimativa de modelo do Open-Meteo.
+    """
+    profiles: list[SourceCreate] = []
+    for offset, (code, name) in enumerate(INMET_REGIONAL_STATIONS):
+        config = {
+            "parser": "inmet",
+            "station_code": code,
+            "classification": "public",
+            "purpose": "regional_observation_for_betim",
+            "timeout_seconds": 25,
+            "retry_attempts": 3,
+            "schedule": {"minute_utc": 12 + offset * 2},
+        }
+        profiles.append(
+            SourceCreate(
+                institution_name="INMET",
+                source_name=f"INMET — estação automática {code} ({name})",
+                source_type="weather_station_observation",
+                access_method="http",
+                authentication_type="none",
+                endpoint_reference=(
+                    "https://apitempo.inmet.gov.br/estacao/"
+                    "{DATA_ONTEM_ISO}/{DATA_HOJE_ISO}/" + code
+                ),
+                connector_config_json=json.dumps(config, ensure_ascii=False),
+                status="active",
+                expected_frequency_minutes=60,
+                criticality="medium",
+            )
+        )
+    return profiles
+
+
 def ana_hidroweb_profiles(station_codes: list[str]) -> list[SourceCreate]:
     """Telemetria fluviométrica da ANA por código de estação.
 

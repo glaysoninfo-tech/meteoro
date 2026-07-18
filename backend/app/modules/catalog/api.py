@@ -206,6 +206,51 @@ def install_redemet_imagery_sources(
     return sources
 
 
+@router.post("/sources/profiles/inmet-stations", response_model=list[SourceOut])
+def install_inmet_regional_stations(
+    current_user: CurrentUser = Depends(require_roles("admin_general", "operator")),
+    db: Session = Depends(get_db),
+) -> list[SourceOut]:
+    """Instala as estações automáticas INMET vizinhas de Betim (observação real).
+
+    Exige apitempo.inmet.gov.br na allowlist de rede. Os dados entram como
+    'observation' na superfície pública, complementando o modelo Open-Meteo.
+    """
+    try:
+        sources = catalog_service.install_inmet_regional_stations_profiles(
+            db=db,
+            organization_id=current_user.organization_id,
+        )
+        for source in sources:
+            if source.last_success_at is None:
+                try:
+                    job, created = ingestion_service.create_collection_job(
+                        db=db,
+                        organization_id=current_user.organization_id,
+                        source_id=source.source_id,
+                        trigger_type="profile_install",
+                        run_metadata_json=None,
+                        requested_by=current_user.email,
+                    )
+                    if created:
+                        RedisIngestionQueue().enqueue(job.job_id)
+                except (RedisError, ValueError):
+                    pass
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    audit_service.create_event(
+        db=db,
+        module="catalog",
+        action="source.inmet_regional_stations_installed",
+        actor=current_user.email,
+        organization_id=current_user.organization_id,
+        resource_type="source_profile",
+        resource_id="inmet_regional_stations",
+    )
+    return sources
+
+
 @router.post("/sources/profiles/ana-hidroweb", response_model=list[SourceOut])
 def install_ana_hidroweb_sources(
     payload: AnaHidrowebInstallRequest,
