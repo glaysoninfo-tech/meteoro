@@ -87,7 +87,9 @@ def betim_open_meteo_profiles() -> list[SourceCreate]:
             authentication_type="none",
             endpoint_reference=(
                 "https://api.open-meteo.com/v1/forecast?latitude=-19.9676&longitude=-44.1983"
-                f"&hourly={hourly}&timezone=UTC&past_days=1&forecast_days=1"
+                # forecast_days=2 garante 24h completas de previsão pública a
+                # qualquer hora do dia (com 1, a partir do meio-dia o horizonte encurta).
+                f"&hourly={hourly}&timezone=UTC&past_days=1&forecast_days=2"
             ),
             connector_config_json=json.dumps(forecast_config, ensure_ascii=False),
             status="active",

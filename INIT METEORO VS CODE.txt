@@ -1,0 +1,22 @@
+TERMINAL 3
+
+# 1. Redis (container antigo, só ligar)
+docker start meteoro-redis
+
+# 2. Worker (agora com o registro completo de models)
+cd C:\Users\Keller\Downloads\Meteoro\Meteoro\backend
+python -m app.modules.ingestion.worker
+
+TERMINAL 2
+
+cd C:\Users\Keller\Downloads\Meteoro\Meteoro\backend
+   python -m scripts.cleanup_future_data
+
+cd C:\Users\Keller\Downloads\Meteoro\Meteoro
+python scripts/vendorize_frontend.py
+
+
+TERMINAL 1 
+
+cd backend
+uvicorn app.main:app --reload
