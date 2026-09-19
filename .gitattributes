@@ -1,0 +1,66 @@
+# Normalização de fim de linha do Meteoro Clima.
+#
+# Regra geral: o Git detecta arquivos de texto e grava sempre LF no
+# repositório. O que muda abaixo é o que cada arquivo recebe NA CÓPIA DE
+# TRABALHO — o que importa para scripts que precisam rodar em Linux
+# (container, CI, servidor) ou no PowerShell do Windows.
+* text=auto
+
+# ---------------------------------------------------------------------
+# Sempre LF — executados em Linux (Docker, CI, servidor de produção).
+# CRLF aqui produz "bad interpreter: /bin/bash^M".
+# ---------------------------------------------------------------------
+*.sh            text eol=lf
+*.py            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.json          text eol=lf
+*.toml          text eol=lf
+*.cfg           text eol=lf
+*.ini           text eol=lf
+*.mako          text eol=lf
+*.sql           text eol=lf
+*.js            text eol=lf
+*.css           text eol=lf
+*.html          text eol=lf
+*.md            text eol=lf
+*.webmanifest   text eol=lf
+Dockerfile      text eol=lf
+.env.example    text eol=lf
+.env.prod.example text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+
+# ---------------------------------------------------------------------
+# Sempre CRLF — interpretados pelo Windows.
+# ---------------------------------------------------------------------
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+*.ps1           text eol=crlf
+
+# ---------------------------------------------------------------------
+# Binários: nunca converter, nunca tentar diff de texto.
+# ---------------------------------------------------------------------
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.pdf           binary
+*.docx          binary
+*.xlsx          binary
+*.zip           binary
+*.gz            binary
+*.db            binary
+*.sqlite        binary
+*.pkl           binary
+*.joblib        binary
+*.onnx          binary
+*.woff          binary
+*.woff2         binary
+
+# ---------------------------------------------------------------------
+# Dependências vendorizadas: fora das estatísticas de linguagem do
+# GitHub e escondidas por padrão no diff de pull request.
+# ---------------------------------------------------------------------
+frontend/vendor/**  linguist-vendored
