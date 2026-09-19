@@ -4,6 +4,7 @@ import csv
 from datetime import datetime, timezone
 import io
 import json
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -25,10 +26,22 @@ from app.modules.public.schemas import (
     PublicSourceHealth,
     PublicTerritory,
 )
+from app.modules.catalog.models import SourceModel
+from app.modules.catalog.schemas import SourceCreate
+from app.modules.catalog.service import catalog_service
+from app.modules.incidents.models import IncidentReportModel
+from app.modules.ingestion.service import ingestion_service
+from app.modules.meteorology.service import meteorology_service
 from app.modules.public.daily_brief import build_daily_brief
-from app.modules.public.model_forecast import public_model_forecast
+from app.modules.public.model_forecast import public_daily_forecast, public_model_forecast
+from app.modules.public.schemas import (
+    CITIZEN_REPORT_CATEGORIES,
+    CitizenReportRequest,
+    CitizenReportResponse,
+)
 from app.modules.public.service import public_publication_service
 
+logger = logging.getLogger("meteoro.public")
 router = APIRouter()
 
 
@@ -36,6 +49,19 @@ router = APIRouter()
 def public_alerts(db: Session = Depends(get_db)) -> list[PublicAlert]:
     organization_id = _public_organization_id()
     return [_alert_out(item) for item in public_publication_service.active_alerts(db, organization_id)]
+
+
+@router.get("/meteorology/forecast/daily")
+def public_forecast_daily(
+    days: int = Query(default=3, ge=1, le=7),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Previsão por dia para o portal do cidadão (máx/mín, chuva, UV, vento)."""
+    organization_id = _public_organization_id()
+    try:
+        return public_daily_forecast(db, organization_id, days=days)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/meteorology/forecast")
@@ -56,6 +82,166 @@ def public_daily_brief(db: Session = Depends(get_db)) -> dict:
         return build_daily_brief(db, organization_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/map-layers")
+def public_map_layers(db: Session = Depends(get_db)) -> dict:
+    """Camadas visuais de contexto (satélite e radar REDEMET) para o portal.
+
+    Imagens de sensoriamento remoto regional: mostram nuvens e ecos de chuva,
+    não constituem alerta municipal.
+    """
+    organization_id = _public_organization_id()
+    layers = meteorology_service.get_operational_map_layers(
+        db=db,
+        organization_id=organization_id,
+    )
+    return {
+        "generated_at_utc": layers.generated_at_utc.isoformat(),
+        "satellite": layers.satellite.model_dump(mode="json") if layers.satellite else None,
+        "radar": layers.radar.model_dump(mode="json") if layers.radar else None,
+        "disclaimer": layers.disclaimer,
+    }
+
+
+@router.get("/conditions/interpolated")
+def public_interpolated_conditions(db: Session = Depends(get_db)) -> dict:
+    """Condições estimadas em Betim por interpolação das estações da região."""
+    organization_id = _public_organization_id()
+    return meteorology_service.interpolated_betim_conditions(db, organization_id)
+
+
+@router.get("/monitoring-points")
+def public_monitoring_points(db: Session = Depends(get_db)) -> dict:
+    """Pontos de monitoramento com dados públicos (últimas leituras e acumulados)."""
+    organization_id = _public_organization_id()
+    return meteorology_service.get_monitoring_points(
+        db=db,
+        organization_id=organization_id,
+        public_only=True,
+    )
+
+
+CITIZEN_REPORT_SOURCE_NAME = "Denúncias e Relatos — Portal do Cidadão"
+CITIZEN_REPORT_DISCLAIMER = (
+    "Este canal apoia o planejamento de ações da SEMMAD e NÃO substitui chamadas "
+    "de emergência. Em risco imediato acione o Corpo de Bombeiros (193), a "
+    "Polícia Ambiental ou os órgãos públicos municipais."
+)
+
+
+def _citizen_report_source(db: Session, organization_id: str) -> SourceModel:
+    existing = db.scalar(
+        select(SourceModel).where(
+            SourceModel.organization_id == organization_id,
+            SourceModel.source_name == CITIZEN_REPORT_SOURCE_NAME,
+        )
+    )
+    if existing is not None:
+        return existing
+    return catalog_service.create_source(
+        db=db,
+        organization_id=organization_id,
+        payload=SourceCreate(
+            institution_name="Prefeitura de Betim / SEMMAD",
+            source_name=CITIZEN_REPORT_SOURCE_NAME,
+            source_type="incident_report_citizen",
+            access_method="manual_file",
+            authentication_type="none",
+            # Fontes manual_file exigem o esquema manual:// (network_security).
+            endpoint_reference="manual://portal-cidadao/denuncias-semmad",
+            connector_config_json=json.dumps(
+                {"classification": "restricted", "purpose": "citizen_reports_semmad"},
+                ensure_ascii=False,
+            ),
+            status="active",
+            expected_frequency_minutes=1440,
+            criticality="medium",
+        ),
+    )
+
+
+@router.post("/incident-report", response_model=CitizenReportResponse, status_code=201)
+def submit_citizen_report(
+    payload: CitizenReportRequest,
+    db: Session = Depends(get_db),
+) -> CitizenReportResponse:
+    """Recebe denúncia/relato do cidadão e envia à fila de triagem da SEMMAD."""
+    organization_id = _public_organization_id()
+    try:
+        source = _citizen_report_source(db, organization_id)
+    except Exception as exc:  # noqa: BLE001 - o cidadão recebe mensagem clara
+        db.rollback()
+        logger.exception("Falha ao preparar a fonte de denúncias do cidadão")
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Canal de denúncias temporariamente indisponível. "
+                "Em risco imediato acione 193 ou 199."
+            ),
+        ) from exc
+    now = datetime.now(tz=timezone.utc)
+    record: dict = {
+        "origem": "citizen",
+        "categoria": payload.category,
+        "severidade": "medium",
+        "descricao": payload.description.strip(),
+        "reported_at": now.isoformat(),
+    }
+    if payload.neighborhood:
+        record["bairro"] = payload.neighborhood.strip()
+    if payload.address:
+        record["endereco"] = payload.address.strip()
+    if payload.reporter_name:
+        record["nome"] = payload.reporter_name.strip()
+    if payload.reporter_contact:
+        record["contato"] = payload.reporter_contact.strip()
+    if payload.latitude is not None and payload.longitude is not None:
+        record["latitude"] = payload.latitude
+        record["longitude"] = payload.longitude
+
+    try:
+        run = ingestion_service.import_uploaded_file(
+            db=db,
+            organization_id=organization_id,
+            source_id=source.source_id,
+            file_name=f"denuncia-{now.strftime('%Y%m%dT%H%M%S%f')}.json",
+            file_content_type="application/json",
+            file_bytes=json.dumps({"reports": [record]}, ensure_ascii=False).encode("utf-8"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - inclui IngestionExecutionError
+        db.rollback()
+        logger.exception("Falha ao registrar relato do cidadão")
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Não foi possível registrar o relato agora. Tente novamente em "
+                "alguns minutos. Em risco imediato acione 193 ou 199."
+            ),
+        ) from exc
+
+    incident = db.scalar(
+        select(IncidentReportModel).where(
+            IncidentReportModel.ingestion_run_id == run.ingestion_run_id
+        )
+    )
+    if incident is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Não foi possível registrar o relato. Revise os dados e tente novamente.",
+        )
+    protocol = incident.report_id.split("-")[0].upper()
+    category_label = CITIZEN_REPORT_CATEGORIES.get(payload.category, payload.category)
+    return CitizenReportResponse(
+        protocol=protocol,
+        detail=(
+            f"Relato de '{category_label}' registrado com protocolo {protocol} e "
+            "encaminhado à triagem da SEMMAD."
+        ),
+        disclaimer=CITIZEN_REPORT_DISCLAIMER,
+    )
 
 
 @router.get("/recommendations", response_model=list[PublicRecommendation])

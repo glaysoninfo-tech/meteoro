@@ -1,5 +1,11 @@
 # Matriz de entregáveis D01–D12
 
+> **Atualização 20/07/2026:** esta matriz reflete o levantamento de julho/2026 e
+> está **desatualizada** em vários itens (D07, D08 e D09 avançaram
+> substancialmente; observabilidade, backup e empacotamento foram concluídos).
+> Para o estado corrente, consulte `ESTADO-DA-PLATAFORMA-2026-07-20.md` na raiz
+> e o quadro de status em `PLANO-PRODUCAO-ASSISTIDA.md`.
+
 Status: **implementado no repositório**, **parcial** ou **evidência municipal pendente**. A última categoria não é defeito de código: depende de aprovação, oficina, ambiente ou exercício realmente executado.
 
 | Entregável | Estado atual | Próxima evidência/ação de aceite |

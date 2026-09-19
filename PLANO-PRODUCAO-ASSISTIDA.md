@@ -6,6 +6,39 @@ Regras do plano: cada etapa é pequena, tem **critério de "pronto"** verificáv
 
 ---
 
+## STATUS DE EXECUÇÃO (atualizado em 18/07/2026)
+
+| Bloco | Etapas | Status |
+|---|---|---|
+| A — Sanear a base | 1 a 4 | ✅ concluído |
+| B — Endurecer a aplicação | 5 a 8 | ✅ concluído |
+| C — Empacotar para indoor | 9, 10b, 11 | ✅ código pronto; **Etapa 10 (LAN/TLS físico) e ensaio do compose pendentes de execução no servidor** |
+| D — Operação assistida | 12 | ✅ observabilidade; 13 e 14 documentadas em `docs/operations/` |
+| E — Evolução estrutural | 15 a 17 | ⏳ pós-piloto |
+
+**Entregas além do plano original** (surgidas do uso real): portal navegável por
+rotas religado, superfície pública completa (resumo diário, condições, previsão,
+mapa da cidade), visão executiva do Gabinete com fila de prioridades, endpoints
+de decisões do Gabinete, conector ANA HidroWeb (nível d'água), estações INMET
+regionais, território oficial IBGE, pontos de monitoramento com acumulados e
+tendência de nível, canal público de denúncia SEMMAD, camadas ANA/CEMADEN/PBH,
+limiares de cheia urbana e diagnóstico da rede hidrometeorológica municipal.
+
+**Documentos operacionais finais:**
+- `docs/operations/checklist-diario-operador.md` (Etapa 13)
+- `docs/operations/protocolo-piloto-assistido.md` (Etapa 14)
+- `docs/operations/backup-e-restore.md` (Etapa 11)
+- `docs/operacao/rede-hidrometeorologica-municipal.md` (diagnóstico de dados)
+- `docs/security/gestao-de-segredos.md` (Etapa 2)
+- `infra/docker/README.md` (Etapas 9 e 10)
+
+**Pendências para o go-live indoor:** ensaiar `compose.prod.yml` numa máquina
+com Docker, definir IP fixo/hostname e firewall, distribuir a CA interna,
+executar o primeiro restore de ensaio e configurar o canal de alertas no
+Alertmanager.
+
+---
+
 ## BLOCO A — Sanear a base (semana 1)
 
 ### Etapa 1 — Consertar a cadeia de migrações Alembic ⚠️ bloqueador

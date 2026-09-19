@@ -92,7 +92,23 @@ def _resolve_parser_name(source: SourceModel) -> str:
 def _load_records(payload: SourcePayload, endpoint_reference: str) -> list[dict[str, Any]]:
     content_type = payload.content_type.lower()
     endpoint_lower = endpoint_reference.lower()
-    text = payload.content_bytes.decode("utf-8")
+    text = payload.content_bytes.decode("utf-8-sig", errors="replace")
+
+    if not text.strip():
+        raise ValueError(
+            "A origem respondeu sem conteúdo (payload vazio). Verifique a "
+            "disponibilidade do serviço e o período consultado."
+        )
+
+    # Serviços públicos frequentemente omitem ou erram o Content-Type (a API do
+    # INMET responde JSON como application/octet-stream). Quando o cabeçalho
+    # não é confiável, o formato é deduzido do próprio conteúdo.
+    if not any(marker in content_type for marker in ("json", "csv", "xml", "text/plain")):
+        sniff = text.lstrip()[:1]
+        if sniff in {"{", "["}:
+            content_type = "application/json"
+        elif "\n" in text and (";" in text.split("\n", 1)[0] or "," in text.split("\n", 1)[0]):
+            content_type = "text/csv"
 
     if "json" in content_type or endpoint_lower.endswith(".json"):
         data = json.loads(text)
@@ -158,6 +174,50 @@ def _parse_inmet(records: list[dict[str, Any]], source: SourceModel) -> list[Par
                         aliases=["VEN_VEL", "wind_speed", "vento_velocidade", "Vel. Vento (m/s)"],
                         unit_aliases=["wind_unit", "unidade_vento"],
                         default_unit="m/s",
+                    ),
+                    # Variáveis presentes na exportação do portal INMET
+                    # (catálogo de estações automáticas) e no BDMEP.
+                    _mapping(
+                        variable_code="dew_point_c",
+                        aliases=["PTO_INS", "dew_point", "ponto_orvalho", "Pto Orvalho Ins. (C)"],
+                        unit_aliases=["dew_point_unit"],
+                        default_unit="c",
+                    ),
+                    _mapping(
+                        variable_code="pressure_hpa",
+                        aliases=["PRE_INS", "pressure", "pressao", "Pressao Ins. (hPa)"],
+                        unit_aliases=["pressure_unit"],
+                        default_unit="hpa",
+                    ),
+                    _mapping(
+                        variable_code="wind_direction_deg",
+                        aliases=["VEN_DIR", "wind_direction", "vento_direcao", "Dir. Vento (m/s)", "Dir. Vento (graus)"],
+                        unit_aliases=["wind_direction_unit"],
+                        default_unit="deg",
+                    ),
+                    _mapping(
+                        variable_code="wind_gust_mps",
+                        aliases=["VEN_RAJ", "wind_gust", "rajada", "Raj. Vento (m/s)"],
+                        unit_aliases=["wind_gust_unit"],
+                        default_unit="m/s",
+                    ),
+                    _mapping(
+                        variable_code="solar_radiation_kjm2",
+                        aliases=["RAD_GLO", "radiation", "radiacao", "Radiacao (KJ/m²)", "Radiacao (KJ/m2)"],
+                        unit_aliases=["radiation_unit"],
+                        default_unit="kj/m2",
+                    ),
+                    _mapping(
+                        variable_code="temperature_max_c",
+                        aliases=["TEM_MAX", "Temp. Max. (C)"],
+                        unit_aliases=[],
+                        default_unit="c",
+                    ),
+                    _mapping(
+                        variable_code="temperature_min_c",
+                        aliases=["TEM_MIN", "Temp. Min. (C)"],
+                        unit_aliases=[],
+                        default_unit="c",
                     ),
                 ],
             )
@@ -383,6 +443,10 @@ def _parse_open_meteo(records: list[dict[str, Any]], source: SourceModel) -> lis
             "relative_humidity_2m": ("humidity_pct", "%"),
             "precipitation": ("rainfall_mm_1h", "mm"),
             "wind_speed_10m": ("wind_speed_mps", "km/h"),
+            "dew_point_2m": ("dew_point_c", "c"),
+            "cloud_cover": ("cloud_cover_pct", "%"),
+            "visibility": ("visibility_m", "m"),
+            "wind_direction_10m": ("wind_direction_deg", "deg"),
         }
         for index, timestamp in enumerate(times):
             observed_at = _extract_datetime({"timestamp": timestamp}, aliases=["timestamp"])
@@ -698,6 +762,44 @@ def _normalize_value(variable_code: str, value: float, unit_original: str) -> tu
         if unit in {"km/h", "kmh"}:
             return (value / 3.6, "m/s")
         return (value, "m/s")
+
+    if variable_code == "dew_point_c":
+        if unit in {"f", "fahrenheit"}:
+            return (((value - 32.0) * 5.0 / 9.0), "c")
+        return (value, "c")
+
+    if variable_code == "cloud_cover_pct":
+        return (value, "%")
+
+    if variable_code == "visibility_m":
+        if unit in {"km"}:
+            return (value * 1000.0, "m")
+        return (value, "m")
+
+    if variable_code == "wind_direction_deg":
+        return (value % 360.0, "deg")
+
+    if variable_code == "wind_gust_mps":
+        if unit in {"kt", "kts", "knot", "knots"}:
+            return (value * 0.514444, "m/s")
+        if unit in {"km/h", "kmh"}:
+            return (value / 3.6, "m/s")
+        return (value, "m/s")
+
+    if variable_code == "pressure_hpa":
+        if unit in {"pa"}:
+            return (value / 100.0, "hpa")
+        if unit in {"mb", "millibar"}:
+            return (value, "hpa")
+        return (value, "hpa")
+
+    if variable_code == "solar_radiation_kjm2":
+        return (value, "kj/m2")
+
+    if variable_code in {"temperature_max_c", "temperature_min_c"}:
+        if unit in {"f", "fahrenheit"}:
+            return (((value - 32.0) * 5.0 / 9.0), "c")
+        return (value, "c")
 
     if variable_code == "river_level_m":
         if unit in {"cm"}:

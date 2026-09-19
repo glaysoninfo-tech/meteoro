@@ -355,6 +355,24 @@ class PlanningService:
                 )
 
         if variable_code == "rainfall_mm_1h":
+            # Proxy de cheia urbana: o Rio Betim e seus afluentes respondem em
+            # HORAS à chuva acumulada na bacia. A chuva horária (pluviômetros
+            # CEMADEN e estações INMET) é o melhor preditor antecipado de
+            # inundação rápida — por isso há um nível crítico e um aviso
+            # antecipado além dos limiares clássicos de tempestade.
+            if value >= 60.0:
+                return self._build_alert(
+                    alert_code="flash_flood_critical",
+                    severity="critical",
+                    observation=observation,
+                    threshold=60.0,
+                    description=(
+                        "Chuva extrema igual ou acima de 60 mm/h: risco iminente de "
+                        "inundação rápida em bacias urbanas de resposta curta (Rio "
+                        "Betim). Acionar protocolo de cheia e vigiar réguas e "
+                        "pluviômetros CEMADEN."
+                    ),
+                )
             if value >= 50.0:
                 return self._build_alert(
                     alert_code="storm_heavy_rain",
@@ -370,6 +388,18 @@ class PlanningService:
                     observation=observation,
                     threshold=30.0,
                     description="Chuva forte acima de 30 mm/h em monitoramento.",
+                )
+            if value >= 20.0:
+                return self._build_alert(
+                    alert_code="urban_rain_advisory",
+                    severity="low",
+                    observation=observation,
+                    threshold=20.0,
+                    description=(
+                        "Chuva significativa acima de 20 mm/h: aviso antecipado para "
+                        "bacias urbanas de resposta rápida; acompanhar acumulados "
+                        "dos pluviômetros CEMADEN de Betim."
+                    ),
                 )
 
         if variable_code == "wind_speed_mps":

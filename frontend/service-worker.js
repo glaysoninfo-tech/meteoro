@@ -1,4 +1,4 @@
-const CACHE = "meteoro-portal-v5";
+const CACHE = "meteoro-portal-v6";
 const ASSETS = [
   "/portal/",
   "/portal/styles.css",

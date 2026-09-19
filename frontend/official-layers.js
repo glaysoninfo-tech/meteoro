@@ -4,8 +4,8 @@ let latestOfficialLayers = null;
 function installOfficialLayerControls() {
   const controls = document.querySelector("#municipal-map-panel .map-controls");
   if (!controls || document.getElementById("layer-watercourses")) return;
-  controls.insertAdjacentHTML("beforeend", '<label><input id="layer-watercourses" type="checkbox" checked> Cursos d\'água (ANA)</label><label><input id="layer-rain-gauges" type="checkbox" checked> Pluviômetros (CEMADEN)</label><label><input id="layer-river-gauges" type="checkbox" checked> Réguas fluviométricas (ANA)</label><label><input id="layer-fire-hotspots" type="checkbox" checked> Queimadas 24h (INPE)</label>');
-  ["layer-watercourses", "layer-rain-gauges", "layer-river-gauges", "layer-fire-hotspots"].forEach((id) => document.getElementById(id).addEventListener("change", renderOfficialLayers));
+  controls.insertAdjacentHTML("beforeend", '<label><input id="layer-watercourses" type="checkbox" checked> Cursos d\'água (ANA)</label><label><input id="layer-rain-gauges" type="checkbox" checked> Pluviômetros (CEMADEN)</label><label><input id="layer-river-gauges" type="checkbox" checked> Réguas fluviométricas (ANA)</label><label><input id="layer-pbh-stations" type="checkbox"> Rede Defesa Civil BH (referência)</label><label><input id="layer-fire-hotspots" type="checkbox" checked> Queimadas 24h (INPE)</label>');
+  ["layer-watercourses", "layer-rain-gauges", "layer-river-gauges", "layer-pbh-stations", "layer-fire-hotspots"].forEach((id) => document.getElementById(id).addEventListener("change", renderOfficialLayers));
   const state = document.createElement("p");
   state.id = "official-layer-state";
   state.className = "official-layer-state";
@@ -40,7 +40,10 @@ function renderOfficialLayers() {
   add("fire_hotspots", document.getElementById("layer-fire-hotspots").checked, latestOfficialLayers.fire_hotspots,
     {pointToLayer:(f, ll) => L.marker(ll,{icon:mapSymbolIcon("▲", "fire", "Foco de calor")})},
     (p) => `<strong>Foco de calor</strong><br>${escapeHtml(p.data_hora_gmt || p.data || "Últimas 24 horas")}<br>Fonte: INPE`);
-  const labels = {hydrography:"ANA cursos d'água", rain_gauges:"CEMADEN", river_gauges:"ANA réguas", fire_hotspots:"INPE"};
+  add("pbh_stations", document.getElementById("layer-pbh-stations")?.checked, latestOfficialLayers.pbh_stations,
+    {pointToLayer:(f, ll) => L.marker(ll,{icon:mapSymbolIcon("◇", "reference", "Estação da Defesa Civil de BH")})},
+    (p) => `<strong>${escapeHtml(p.codigo || "Estação")} · ${escapeHtml(p.tipo || "")}</strong><br>Bacia: ${escapeHtml(p.bacia || "não informada")}<br>Altitude: ${escapeHtml(String(p.altitude ?? "n/d"))} m<br><small>${escapeHtml(p.referencia || "")}</small><br><em>Cadastro (sem medições publicadas) — referência de rede municipal</em><br>Fonte: Defesa Civil BH / PRODABEL`);
+  const labels = {hydrography:"ANA cursos d'água", rain_gauges:"CEMADEN", river_gauges:"ANA réguas", pbh_stations:"Rede Defesa Civil BH (cadastro)", fire_hotspots:"INPE"};
   document.getElementById("official-layer-state").innerHTML = Object.entries(latestOfficialLayers.status).map(([key, value]) => `<span class="${value.available ? "source-ok" : "source-off"}" title="${escapeHtml(value.detail || value.source || "")}">${labels[key] || key}: ${value.available ? `${value.count} feição(ões)` : "indisponível"}</span>`).join("");
   updateOperationalMapStatus();
 }

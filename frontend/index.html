@@ -4,7 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#073b4c" />
-    <title>Meteoro Clima</title>
+    <title>Eco-Gestão Municipal — Betim</title>
+    <link rel="icon" href="/portal/vendor/eco-gestao-logo.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/portal/vendor/eco-gestao-logo.png" />
     <link rel="manifest" href="/portal/manifest.webmanifest" />
     <link rel="stylesheet" href="/portal/styles.css" />
     <link rel="stylesheet" href="/portal/operations.css" />
@@ -20,7 +22,7 @@
   <body>
     <div id="api-banner" hidden role="alert" style="background:#7f1d1d;color:#fff;text-align:center;padding:.55rem .8rem;font-weight:600;"></div>
     <header>
-      <a class="brand" href="#public/situacao">Meteoro <span>Clima</span></a>
+      <a class="brand" href="#public/situacao">Eco-Gestão <span>Municipal</span></a>
       <nav><a href="#public/situacao">Público</a><a href="#operacao/visao-geral">Operação</a></nav>
     </header>
     <main>
@@ -29,10 +31,20 @@
         <nav id="public-tabs" class="route-tabs" aria-label="Seções públicas"></nav>
 
         <div data-public-route="situacao">
-          <div class="hero">
-            <p class="eyebrow">PLATAFORMA MUNICIPAL</p>
-            <h1>Informação climática clara para decisões seguras.</h1>
-            <p>Situação atual, previsão e alertas oficiais em linguagem simples.</p>
+          <div class="hero eco-hero">
+            <div class="eco-brand">
+              <img src="/portal/vendor/eco-gestao-logo.png" alt="Eco-Gestão Municipal" class="eco-logo" onerror="this.style.display='none'" />
+              <div>
+                <p class="eyebrow">ECO-GESTÃO MUNICIPAL</p>
+                <h1>Informação climática e ambiental para decisões seguras.</h1>
+                <p class="eco-sub">Situação atual, previsão de 72 horas, alertas oficiais e canal de denúncia ambiental — em linguagem simples, para toda Betim.</p>
+              </div>
+            </div>
+            <div class="eco-quick">
+              <a href="#public/alertas">Alertas e orientações</a>
+              <a href="#public/denuncia">Denunciar problema ambiental</a>
+              <a href="#public/dados">Dados abertos</a>
+            </div>
           </div>
           <article class="daily-brief" aria-labelledby="daily-brief-title">
             <p class="eyebrow">RESUMO DO DIA</p>
@@ -52,16 +64,30 @@
             </div>
             <p id="current-conditions-state" class="muted"></p>
           </section>
-          <section aria-label="Previsão de modelo">
-            <p class="eyebrow">PRÓXIMAS 24 HORAS</p>
-            <div id="public-forecast-grid" class="forecast-grid"></div>
-            <p id="public-forecast-state" class="muted">Carregando previsão…</p>
-            <p id="public-forecast-note" class="disclaimer"></p>
+          <section aria-label="Previsão para os próximos dias">
+            <p class="eyebrow">PREVISÃO PARA 72 HORAS</p>
+            <div id="daily-forecast" class="daily-forecast"></div>
+            <section id="hourly-detail" class="hourly-detail" hidden aria-live="polite"></section>
+            <p id="daily-forecast-state" class="muted">Carregando previsão…</p>
+            <details class="hourly-details" hidden>
+              <div id="public-forecast-grid" class="forecast-grid"></div>
+              <p id="public-forecast-state" class="muted"></p>
+              <p id="public-forecast-note" class="disclaimer"></p>
+            </details>
           </section>
           <section aria-label="Mapa público">
             <p class="eyebrow">MAPA DA CIDADE</p>
-            <div id="public-map" role="region" aria-label="Mapa com territórios publicados e alertas vigentes"></div>
+            <div class="map-controls" role="group" aria-label="Camadas do mapa">
+              <label><input id="public-layer-satellite" type="checkbox" /> Nuvens (satélite)</label>
+              <label><input id="public-layer-radar" type="checkbox" /> Chuva (radar)</label>
+              <label class="opacity-control">Intensidade
+                <input id="public-layer-opacity" type="range" min="20" max="100" value="80" step="5" />
+              </label>
+              <span id="public-layers-state" class="muted"></span>
+            </div>
+            <div id="public-map" role="region" aria-label="Mapa com territórios publicados, estações e camadas meteorológicas"></div>
             <p id="public-map-state" class="muted">Carregando o mapa público…</p>
+            <p class="disclaimer">Satélite e radar são imagens regionais de contexto (REDEMET/DECEA). O radar mostra eco de chuva, não medição no solo.</p>
           </section>
         </div>
 
@@ -80,11 +106,32 @@
           </section>
         </div>
 
-        <div data-public-route="territorio" hidden>
-          <p class="eyebrow">TERRITÓRIO</p>
-          <h2>Cobertura territorial publicada</h2>
-          <p id="public-territories-state" class="muted">Carregando territórios…</p>
-          <div id="public-territories" class="cards"></div>
+        <div data-public-route="denuncia" hidden>
+          <p class="eyebrow">DENÚNCIA E RELATO</p>
+          <h2>Comunicar um problema ambiental</h2>
+          <p class="disclaimer report-disclaimer"><strong>Atenção:</strong> este canal apoia o planejamento de ações da SEMMAD e <strong>não substitui chamadas de emergência</strong>. Em risco imediato acione o Corpo de Bombeiros (193), a Polícia Ambiental ou os órgãos públicos municipais.</p>
+          <form id="citizen-report-form" class="report-form citizen-form">
+            <label>Tipo de evento
+              <select id="report-category" required>
+                <option value="queimada_recorrente">Queimada recorrente</option>
+                <option value="bota_fora_entulho">Bota-fora de entulho</option>
+                <option value="lixo_acumulado">Lixo acumulado</option>
+                <option value="poluicao_industrial">Poluição industrial</option>
+                <option value="esgoto_ceu_aberto">Esgoto a céu aberto</option>
+              </select>
+            </label>
+            <label>Bairro<input id="report-neighborhood" type="text" maxlength="120" placeholder="Ex.: Bandeirinhas" /></label>
+            <label>Endereço ou referência<input id="report-address" type="text" maxlength="300" placeholder="Rua, número ou ponto de referência" /></label>
+            <label class="field-wide">Descrição do que você observou
+              <textarea id="report-description" required minlength="10" maxlength="2000" rows="4" placeholder="Descreva o que viu, desde quando ocorre e se há repetição."></textarea>
+            </label>
+            <label>Seu nome (opcional)<input id="report-name" type="text" maxlength="120" /></label>
+            <label>Contato para retorno (opcional)<input id="report-contact" type="text" maxlength="120" placeholder="Telefone ou e-mail" /></label>
+            <button type="button" id="report-use-location">Usar minha localização</button>
+            <button type="submit">Enviar relato</button>
+          </form>
+          <p id="report-location-state" class="muted"></p>
+          <p id="citizen-report-state" class="muted" aria-live="polite"></p>
         </div>
 
         <div data-public-route="protecao" hidden>
@@ -134,9 +181,36 @@
             <ul id="priority-list" class="priority-list"></ul>
           </section>
           <section id="overview-cabinet" hidden aria-labelledby="cabinet-title">
-            <p class="eyebrow">GABINETE — DECISÕES EM ABERTO</p>
-            <h3 id="cabinet-title" class="visually-hidden">Decisões registradas aguardando conclusão</h3>
-            <div id="cabinet-list" class="queue-list"></div>
+            <div class="section-title">
+              <div><p class="eyebrow">GABINETE — DECISÕES</p><h3 id="cabinet-title">Decisões registradas e prazos</h3></div>
+              <button id="cabinet-new" type="button">+ Registrar decisão</button>
+            </div>
+            <form id="cabinet-form" class="report-form cabinet-form" hidden>
+              <label>Território / área<input id="cabinet-territory" type="text" required maxlength="160" placeholder="Ex.: Bandeirinhas" /></label>
+              <label>Responsável<input id="cabinet-role" type="text" required maxlength="160" placeholder="Ex.: Defesa Civil" /></label>
+              <label>Prazo<input id="cabinet-deadline" type="datetime-local" /></label>
+              <label>Risco relacionado<input id="cabinet-risk" type="text" maxlength="240" placeholder="Ex.: chuva intensa 18/07" /></label>
+              <label class="field-wide">Decisão<textarea id="cabinet-decision" required minlength="5" rows="2" placeholder="O que foi decidido na reunião."></textarea></label>
+              <label class="field-wide">Ação do responsável<textarea id="cabinet-action" required minlength="5" maxlength="500" rows="2" placeholder="O que será feito, por quem."></textarea></label>
+              <label class="field-wide">Observações<input id="cabinet-notes" type="text" maxlength="500" /></label>
+              <button type="submit">Registrar</button>
+              <button id="cabinet-cancel" type="button">Cancelar</button>
+            </form>
+            <p id="cabinet-form-state" class="muted" aria-live="polite"></p>
+            <div class="cabinet-filters" role="group" aria-label="Filtro de decisões">
+              <label><input type="radio" name="cabinet-filter" value="open" checked /> Em aberto</label>
+              <label><input type="radio" name="cabinet-filter" value="all" /> Todas</label>
+            </div>
+            <div id="cabinet-list" class="cabinet-list"></div>
+          </section>
+          <section id="overview-sources" hidden aria-labelledby="sources-title">
+            <div class="section-title">
+              <div><p class="eyebrow">OPERAÇÕES — SAÚDE DAS FONTES</p><h3 id="sources-title">Estado de cada fonte de dados</h3></div>
+              <button id="collect-all" type="button">↻ Coletar agora (todas)</button>
+            </div>
+            <p id="collect-state" class="muted" aria-live="polite"></p>
+            <div id="sources-health" class="sources-health"></div>
+            <p class="disclaimer">Fontes com atraso podem indicar indisponibilidade da origem (comum em REDEMET e ANA) ou worker parado. Consulte o checklist do operador.</p>
           </section>
           <details id="runs-details" class="runs-details">
             <summary>Execuções recentes de ingestão (detalhe técnico)</summary>
@@ -148,7 +222,7 @@
           <section id="municipal-map-panel" class="aviation" hidden aria-labelledby="municipal-map-title">
             <div class="section-title"><div><p class="eyebrow">VISÃO MUNICIPAL</p><h3 id="municipal-map-title">Mapa operacional</h3></div><button id="refresh-operation" type="button">Atualizar painel</button></div>
             <p id="municipal-map-state" class="muted">Carregando camadas municipais…</p>
-            <div class="map-controls" role="group" aria-label="Camadas do mapa municipal"><label><input id="layer-territories" type="checkbox" checked /> Territórios</label><label><input id="layer-stations" type="checkbox" checked /> Estações</label><label><input id="layer-alerts" type="checkbox" checked /> Alertas oficiais</label><label><input id="layer-incidents" type="checkbox" checked /> Ocorrências georreferenciadas</label></div>
+            <div class="map-controls" role="group" aria-label="Camadas do mapa municipal"><label><input id="layer-territories" type="checkbox" checked /> Territórios</label><label><input id="layer-stations" type="checkbox" checked /> Estações</label><label><input id="layer-alerts" type="checkbox" checked /> Alertas oficiais</label><label><input id="layer-incidents" type="checkbox" checked /> Ocorrências georreferenciadas</label><label><input id="municipal-layer-satellite" type="checkbox" /> Nuvens (satélite)</label><label><input id="municipal-layer-radar" type="checkbox" /> Chuva (radar)</label><label class="opacity-control">Intensidade<input id="municipal-layer-opacity" type="range" min="20" max="100" value="80" step="5" /></label></div>
             <div id="municipal-map" role="region" aria-label="Mapa municipal com territórios, estações, alertas e ocorrências"></div>
             <p class="disclaimer">O mapa mostra somente geometria fornecida ou homologada. Endereços e bairros sem coordenadas não são posicionados por estimativa.</p>
           </section>
@@ -160,6 +234,7 @@
             <p id="aviation-state" class="muted">Carregue os conectores REDEMET para visualizar SBBH e SNDV.</p>
             <div class="aviation-legend" aria-label="Legenda de categoria de voo"><span><i class="dot status-g"></i>Verde: VFR</span><span><i class="dot status-y"></i>Amarelo: atenção</span><span><i class="dot status-r"></i>Vermelho: IFR</span><span><i class="dot status-u"></i>Sem dado</span></div>
             <div class="map-controls" role="group" aria-label="Camadas meteorológicas"><label><input id="layer-satellite" type="checkbox" checked /> Satélite IR realçado</label><label><input id="layer-radar" type="checkbox" checked /> Radar MaxCAPPI</label><strong id="lightning-counter">Raios: aguardando fonte</strong></div>
+            <p id="imagery-state" class="imagery-state"></p>
             <div id="aviation-map" role="region" aria-label="Mapa de condições aeronáuticas regionais"></div>
             <div id="aviation-cards" class="cards aviation-cards"></div>
             <p class="disclaimer">As cores são categorias aeronáuticas da REDEMET, calculadas no aeródromo por visibilidade e teto. Não representam alerta municipal nem condição observada em Betim.</p>
@@ -174,6 +249,68 @@
         </div>
 
         <div data-operational-group="planejamento" hidden>
+          <section id="health-panel" aria-labelledby="health-title">
+            <div class="section-title">
+              <div><p class="eyebrow">SAÚDE AMBIENTAL</p><h3 id="health-title">Calor, umidade, queimadas e fumaça</h3></div>
+              <button id="health-refresh" type="button">Atualizar</button>
+            </div>
+            <p id="health-state" class="muted">Carregando indicadores…</p>
+            <div id="health-indicators" class="health-indicators"></div>
+            <div class="health-columns">
+              <section><h4>Ações recomendadas</h4><div id="health-actions" class="health-actions"></div></section>
+              <section><h4>Grupos prioritários</h4><ul id="health-groups" class="health-groups"></ul></section>
+            </div>
+            <p id="health-disclaimer" class="disclaimer"></p>
+          </section>
+          <section id="mitigation-panel" aria-labelledby="mitigation-title">
+            <div class="section-title">
+              <div><p class="eyebrow">PLANEJAMENTO E MITIGAÇÃO</p><h3 id="mitigation-title">Ações estruturantes por risco</h3></div>
+              <button id="mitigation-new" type="button">+ Nova ação</button>
+            </div>
+            <form id="mitigation-form" class="report-form cabinet-form" hidden>
+              <label>Risco
+                <select id="mitigation-theme" required>
+                  <option value="calor">Calor extremo</option>
+                  <option value="baixa_umidade">Baixa umidade</option>
+                  <option value="queimada">Queimada</option>
+                  <option value="fumaca">Fumaça</option>
+                  <option value="cheia">Cheia / alagamento</option>
+                  <option value="deslizamento">Deslizamento</option>
+                  <option value="qualidade_ar">Qualidade do ar</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </label>
+              <label>Tipo
+                <select id="mitigation-type">
+                  <option value="mitigacao">Mitigação</option>
+                  <option value="adaptacao">Adaptação</option>
+                  <option value="preparacao">Preparação</option>
+                  <option value="resposta">Resposta</option>
+                  <option value="recuperacao">Recuperação</option>
+                </select>
+              </label>
+              <label>Território<input id="mitigation-territory" type="text" required maxlength="160" placeholder="Bairro, região ou município" /></label>
+              <label>Responsável<input id="mitigation-role" type="text" required maxlength="160" placeholder="Ex.: SEMMAD" /></label>
+              <label>Prioridade
+                <select id="mitigation-priority">
+                  <option value="baixa">Baixa</option>
+                  <option value="media" selected>Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="critica">Crítica</option>
+                </select>
+              </label>
+              <label>Prazo<input id="mitigation-deadline" type="date" /></label>
+              <label>Custo estimado (R$)<input id="mitigation-cost" type="number" min="0" step="1000" /></label>
+              <label>Indicador de sucesso<input id="mitigation-indicator" type="text" maxlength="300" placeholder="Ex.: reduzir 30% das ocorrências de queimada no bairro" /></label>
+              <label class="field-wide">Título<input id="mitigation-title-input" type="text" required maxlength="200" placeholder="Ex.: Arborização de vias no Centro" /></label>
+              <label class="field-wide">Descrição<textarea id="mitigation-description" required rows="2" placeholder="O que será executado e por quê."></textarea></label>
+              <button type="submit">Registrar ação</button>
+              <button id="mitigation-cancel" type="button">Cancelar</button>
+            </form>
+            <p id="mitigation-state" class="muted" aria-live="polite"></p>
+            <div id="mitigation-summary" class="mitigation-summary"></div>
+            <div id="mitigation-list" class="cabinet-list"></div>
+          </section>
           <section id="reports-panel" class="aviation reports-panel" hidden aria-labelledby="reports-title">
             <div class="section-title"><div><p class="eyebrow">RELATÓRIOS E SOLICITAÇÕES</p><h3 id="reports-title">Previsão e saídas operacionais</h3></div></div>
             <form id="reports-form" class="report-form">

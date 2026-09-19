@@ -20,3 +20,23 @@ TERMINAL 1
 
 cd backend
 uvicorn app.main:app --reload
+
+
+Atualização de Fontes
+$r = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/api/v1/auth/token -ContentType "application/json" -Body '{"email":"admin@example.org","password":"senha-forte-123"}'
+$h = @{ Authorization = "Bearer $($r.access_token)" }
+$coords = @{ "A555"=@(-20.0316,-44.0114); "A521"=@(-19.8839,-43.9694); "A537"=@(-19.9800,-43.9586); "A535"=@(-19.8853,-44.4168) }
+$fontes = Invoke-RestMethod -Uri http://127.0.0.1:8000/api/v1/catalog/sources -Headers $h
+foreach ($f in ($fontes | Where-Object { $_.source_name -like "*INMET*" })) {
+  $cfg = $f.connector_config_json | ConvertFrom-Json
+  $par = $coords[$cfg.station_code]
+  if ($par) {
+    $cfg | Add-Member -NotePropertyName latitude -NotePropertyValue $par[0] -Force
+    $cfg | Add-Member -NotePropertyName longitude -NotePropertyValue $par[1] -Force
+    $body = @{ connector_config_json = ($cfg | ConvertTo-Json -Compress) } | ConvertTo-Json
+    Invoke-RestMethod -Method Patch -Uri "http://127.0.0.1:8000/api/v1/catalog/sources/$($f.source_id)" -ContentType "application/json" -Headers $h -Body $body | Out-Null
+    Write-Host "coordenadas aplicadas: $($f.source_name)"
+  }
+}
+$florestal = $fontes | Where-Object { $_.source_name -like "*CSV manual A535*" }
+curl.exe -X POST "http://127.0.0.1:8000/api/v1/ingestion/runs/import/source/$($florestal.source_id)" -H "Authorization: Bearer $($r.access_token)" -F "file=@C:\Users\Keller\Downloads\Meteoro\generatedBy_react-csv.csv"

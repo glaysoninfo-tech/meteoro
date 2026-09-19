@@ -251,6 +251,38 @@ def install_inmet_regional_stations(
     return sources
 
 
+@router.post("/sources/profiles/inmet-manual-csv", response_model=list[SourceOut])
+def install_inmet_manual_csv(
+    payload: AnaHidrowebInstallRequest,
+    current_user: CurrentUser = Depends(require_roles("admin_general", "operator")),
+    db: Session = Depends(get_db),
+) -> list[SourceOut]:
+    """Cria fontes de importação manual do CSV do catálogo INMET.
+
+    Após criar, envie o arquivo baixado em portal.inmet.gov.br/paginas/catalogoaut
+    pelo endpoint de upload da ingestão (POST /ingestion/runs/import/{source_id}).
+    """
+    try:
+        sources = catalog_service.install_inmet_manual_csv_profiles(
+            db=db,
+            organization_id=current_user.organization_id,
+            station_codes=payload.station_codes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    audit_service.create_event(
+        db=db,
+        module="catalog",
+        action="source.inmet_manual_csv_profiles_installed",
+        actor=current_user.email,
+        organization_id=current_user.organization_id,
+        resource_type="source_profile",
+        resource_id=f"inmet_manual::{','.join(payload.station_codes)}"[:200],
+    )
+    return sources
+
+
 @router.post("/sources/profiles/ana-hidroweb", response_model=list[SourceOut])
 def install_ana_hidroweb_sources(
     payload: AnaHidrowebInstallRequest,

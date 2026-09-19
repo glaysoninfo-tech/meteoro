@@ -6,6 +6,7 @@ from app.modules.catalog.api import router as catalog_router
 from app.modules.communications.api import router as communications_router
 from app.modules.data_quality.api import router as data_quality_router
 from app.modules.geospatial.api import router as geospatial_router
+from app.modules.health.api import router as environmental_health_router
 from app.modules.identity.api import router as identity_router
 from app.modules.incidents.api import router as incidents_router
 from app.modules.ingestion.api import router as ingestion_router
@@ -26,6 +27,9 @@ def system_status() -> dict[str, str]:
 api_router.include_router(identity_router, prefix="/auth", tags=["auth"])
 api_router.include_router(catalog_router, prefix="/catalog", tags=["catalog"])
 api_router.include_router(geospatial_router, prefix="/geospatial", tags=["geospatial"])
+api_router.include_router(
+    environmental_health_router, prefix="/environmental-health", tags=["environmental-health"]
+)
 api_router.include_router(ingestion_router, prefix="/ingestion", tags=["ingestion"])
 api_router.include_router(communications_router, prefix="/communications", tags=["communications"])
 api_router.include_router(meteorology_router, prefix="/meteorology", tags=["meteorology"])

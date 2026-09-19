@@ -39,6 +39,21 @@ def operational_map_layers(
     )
 
 
+@router.get("/monitoring-points")
+def monitoring_points(
+    current_user: CurrentUser = Depends(
+        require_roles("admin_general", "operator", "analyst", "auditor")
+    ),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Pontos estratégicos de monitoramento com últimas leituras, acumulados
+    de chuva (1/6/24/72 h) e tendência de nível d'água."""
+    return meteorology_service.get_monitoring_points(
+        db=db,
+        organization_id=current_user.organization_id,
+    )
+
+
 @router.get("/forecast", response_model=RequestedForecastResponse)
 def requested_forecast(
     issued_at_utc: datetime | None = Query(default=None),

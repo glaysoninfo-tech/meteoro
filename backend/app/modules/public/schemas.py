@@ -1,6 +1,41 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+CITIZEN_REPORT_CATEGORIES = {
+    "queimada_recorrente": "Queimada recorrente",
+    "bota_fora_entulho": "Bota-fora de entulho",
+    "lixo_acumulado": "Lixo acumulado",
+    "poluicao_industrial": "Poluição industrial",
+    "esgoto_ceu_aberto": "Esgoto a céu aberto",
+}
+
+
+class CitizenReportRequest(BaseModel):
+    """Denúncia/relato do cidadão para triagem da SEMMAD (não emergencial)."""
+
+    category: Literal[
+        "queimada_recorrente",
+        "bota_fora_entulho",
+        "lixo_acumulado",
+        "poluicao_industrial",
+        "esgoto_ceu_aberto",
+    ]
+    description: str = Field(min_length=10, max_length=2000)
+    neighborhood: str | None = Field(default=None, max_length=120)
+    address: str | None = Field(default=None, max_length=300)
+    # Faixa aproximada da região de Betim — rejeita coordenadas absurdas.
+    latitude: float | None = Field(default=None, ge=-21.0, le=-19.0)
+    longitude: float | None = Field(default=None, ge=-45.5, le=-43.0)
+    reporter_name: str | None = Field(default=None, max_length=120)
+    reporter_contact: str | None = Field(default=None, max_length=120)
+
+
+class CitizenReportResponse(BaseModel):
+    protocol: str
+    detail: str
+    disclaimer: str
 
 
 class PublicAlert(BaseModel):

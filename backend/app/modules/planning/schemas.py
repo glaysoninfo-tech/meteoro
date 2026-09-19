@@ -3,6 +3,62 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class MitigationActionCreate(BaseModel):
+    """Ação estruturante de mitigação/adaptação vinculada a um risco."""
+
+    risk_theme: str = Field(
+        pattern="^(calor|baixa_umidade|queimada|fumaca|cheia|deslizamento|qualidade_ar|outro)$"
+    )
+    territory: str = Field(min_length=2, max_length=160)
+    title: str = Field(min_length=5, max_length=200)
+    description: str = Field(min_length=5)
+    responsible_role: str = Field(min_length=2, max_length=160)
+    action_type: str = Field(
+        default="mitigacao", pattern="^(mitigacao|adaptacao|preparacao|resposta|recuperacao)$"
+    )
+    priority: str = Field(default="media", pattern="^(baixa|media|alta|critica)$")
+    deadline_utc: datetime | None = None
+    estimated_cost_brl: float | None = Field(default=None, ge=0)
+    indicator: str | None = Field(default=None, max_length=300)
+    notes: str | None = None
+
+
+class MitigationActionUpdate(BaseModel):
+    status: str | None = Field(
+        default=None, pattern="^(planejada|em_execucao|concluida|suspensa|cancelada)$"
+    )
+    progress_pct: int | None = Field(default=None, ge=0, le=100)
+    deadline_utc: datetime | None = None
+    estimated_cost_brl: float | None = Field(default=None, ge=0)
+    indicator: str | None = Field(default=None, max_length=300)
+    notes: str | None = None
+
+
+class MitigationActionOut(BaseModel):
+    action_id: str
+    organization_id: str
+    risk_theme: str
+    territory: str
+    title: str
+    description: str
+    responsible_role: str
+    action_type: str
+    priority: str
+    status: str
+    progress_pct: int
+    deadline_utc: datetime | None
+    estimated_cost_brl: float | None
+    indicator: str | None
+    notes: str | None
+    created_by: str
+    updated_by: str
+    created_at: datetime
+    updated_at: datetime
+    completed_at_utc: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
 class CabinetDecisionCreate(BaseModel):
     risk_key: str = Field(min_length=3, max_length=240)
     territory: str = Field(min_length=2, max_length=160)

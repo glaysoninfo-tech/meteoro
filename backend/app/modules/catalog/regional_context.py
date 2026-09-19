@@ -77,7 +77,12 @@ def betim_open_meteo_profiles() -> list[SourceCreate]:
         "schedule": {"enabled": False},
         "reprocess": {"start_query_param": "start_date", "end_query_param": "end_date"},
     }
-    hourly = "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m"
+    # dew_point/cloud_cover/visibility sustentam o cálculo de risco de nevoeiro;
+    # wind_direction dá a rosa dos ventos no popup da estação.
+    hourly = (
+        "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,"
+        "dew_point_2m,cloud_cover,visibility,wind_direction_10m"
+    )
     return [
         SourceCreate(
             institution_name="Open-Meteo",
@@ -87,9 +92,13 @@ def betim_open_meteo_profiles() -> list[SourceCreate]:
             authentication_type="none",
             endpoint_reference=(
                 "https://api.open-meteo.com/v1/forecast?latitude=-19.9676&longitude=-44.1983"
-                # forecast_days=2 garante 24h completas de previsão pública a
-                # qualquer hora do dia (com 1, a partir do meio-dia o horizonte encurta).
-                f"&hourly={hourly}&timezone=UTC&past_days=1&forecast_days=2"
+                # forecast_days=4 sustenta o painel público de 72 h a qualquer
+                # hora do dia; daily traz os agregados por dia (máx/mín, chuva,
+                # probabilidade e UV) no padrão de leitura do cidadão.
+                f"&hourly={hourly}&timezone=UTC&past_days=1&forecast_days=4"
+                "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,"
+                "precipitation_probability_max,uv_index_max,wind_speed_10m_max,"
+                "weather_code,sunrise,sunset"
             ),
             connector_config_json=json.dumps(forecast_config, ensure_ascii=False),
             status="active",
@@ -124,6 +133,58 @@ INMET_REGIONAL_STATIONS: tuple[tuple[str, str], ...] = (
     ("A535", "Florestal"),
 )
 
+# Coordenadas oficiais das estações (catálogo de automáticas do INMET).
+# O CSV exportado do portal não traz posição, então ela é declarada aqui para
+# que a estação apareça no mapa de pontos de monitoramento.
+INMET_STATION_COORDINATES: dict[str, tuple[float, float]] = {
+    "A555": (-20.0316, -44.0114),
+    "A521": (-19.8839, -43.9694),
+    "A537": (-19.9800, -43.9586),
+    "A535": (-19.8853, -44.4168),
+}
+
+
+def inmet_manual_csv_profiles(station_codes: list[str]) -> list[SourceCreate]:
+    """Fontes de importação manual do CSV exportado no portal do INMET.
+
+    O catálogo de estações automáticas (portal.inmet.gov.br/paginas/catalogoaut)
+    permite baixar a série horária completa — temperatura, umidade, ponto de
+    orvalho, pressão, vento, rajada, radiação e chuva. Enquanto a API pública
+    oscila, este caminho garante observação real por upload do arquivo.
+    """
+    conhecidas = {code: name for code, name in INMET_REGIONAL_STATIONS}
+    profiles: list[SourceCreate] = []
+    for code in station_codes:
+        clean = str(code).strip().upper()
+        if not clean:
+            continue
+        nome = conhecidas.get(clean, clean)
+        config = {
+            "parser": "inmet",
+            "station_code": clean,
+            "classification": "public",
+            "purpose": "regional_observation_for_betim",
+            "data_kind": "observation",
+        }
+        coordenadas = INMET_STATION_COORDINATES.get(clean)
+        if coordenadas:
+            config["latitude"], config["longitude"] = coordenadas
+        profiles.append(
+            SourceCreate(
+                institution_name="INMET",
+                source_name=f"INMET — CSV manual {clean} ({nome})",
+                source_type="weather_station_observation",
+                access_method="manual_file",
+                authentication_type="none",
+                endpoint_reference=f"manual://inmet/catalogo-automaticas/{clean}",
+                connector_config_json=json.dumps(config, ensure_ascii=False),
+                status="active",
+                expected_frequency_minutes=1440,
+                criticality="medium",
+            )
+        )
+    return profiles
+
 
 def inmet_regional_stations_profiles() -> list[SourceCreate]:
     """Observação horária real das estações automáticas INMET vizinhas.
@@ -142,6 +203,9 @@ def inmet_regional_stations_profiles() -> list[SourceCreate]:
             "retry_attempts": 3,
             "schedule": {"minute_utc": 12 + offset * 2},
         }
+        coordenadas = INMET_STATION_COORDINATES.get(code)
+        if coordenadas:
+            config["latitude"], config["longitude"] = coordenadas
         profiles.append(
             SourceCreate(
                 institution_name="INMET",

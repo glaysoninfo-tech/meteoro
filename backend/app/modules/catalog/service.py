@@ -10,6 +10,7 @@ from app.modules.catalog.models import SourceModel
 from app.modules.catalog.regional_context import (
     ana_hidroweb_profiles,
     betim_open_meteo_profiles,
+    inmet_manual_csv_profiles,
     inmet_regional_stations_profiles,
     redemet_aviation_profiles,
     redemet_imagery_profiles,
@@ -126,6 +127,18 @@ class CatalogService:
             db=db,
             organization_id=organization_id,
             profiles=inmet_regional_stations_profiles(),
+        )
+
+    def install_inmet_manual_csv_profiles(
+        self,
+        db: Session,
+        organization_id: str,
+        station_codes: list[str],
+    ) -> list[SourceModel]:
+        return self._install_profiles(
+            db=db,
+            organization_id=organization_id,
+            profiles=inmet_manual_csv_profiles(station_codes),
         )
 
     def install_ana_hidroweb_profiles(

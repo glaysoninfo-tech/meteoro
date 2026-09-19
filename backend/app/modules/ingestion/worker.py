@@ -223,7 +223,15 @@ def main() -> None:
     from app.core.logging import configure_logging
 
     configure_logging()
-    IngestionWorker().run_forever()
+    logger.info(
+        "Worker de ingestão iniciado. Aguardando jobs na fila (Ctrl+C encerra).",
+        extra={"extra_fields": {"queue": settings.ingestion_worker_queue_name}},
+    )
+    try:
+        IngestionWorker().run_forever()
+    except KeyboardInterrupt:
+        # Encerramento solicitado pelo operador: saída limpa, sem stacktrace.
+        logger.info("Worker de ingestão encerrado pelo operador.")
 
 
 if __name__ == "__main__":

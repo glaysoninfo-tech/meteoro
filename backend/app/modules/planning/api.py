@@ -10,12 +10,15 @@ from app.db.session import get_db
 from app.modules.audit.service import audit_service
 from app.modules.identity.dependencies import require_roles
 from app.modules.identity.schemas import CurrentUser
-from app.modules.planning.models import CabinetDecisionModel
+from app.modules.planning.models import CabinetDecisionModel, MitigationActionModel
 from app.modules.planning.pdf import build_simple_pdf
 from app.modules.planning.schemas import (
     CabinetDecisionCreate,
     CabinetDecisionOut,
     CabinetDecisionUpdate,
+    MitigationActionCreate,
+    MitigationActionOut,
+    MitigationActionUpdate,
     CommitteeClimateReport,
     StationAvailabilityReport,
 )
@@ -179,6 +182,109 @@ def station_availability_pdf(
         ("Estacoes", [f"{item.station_code} | {item.health_status} | completude {item.completeness_percent if item.completeness_percent is not None else 'n/d'}% | ultima observacao {item.last_observed_at_utc.isoformat() if item.last_observed_at_utc else 'n/d'}" for item in report.stations] or ["Nenhuma estacao cadastrada no periodo."]),
     ])
     return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=meteoro-disponibilidade-estacoes.pdf"})
+
+
+# ----------------------- Ações de mitigação -----------------------
+
+
+@router.post("/mitigation/actions", response_model=MitigationActionOut, status_code=201)
+def create_mitigation_action(
+    payload: MitigationActionCreate,
+    current_user: CurrentUser = Depends(require_roles("admin_general", "operator")),
+    db: Session = Depends(get_db),
+) -> MitigationActionOut:
+    """Registra ação estruturante de mitigação/adaptação vinculada a um risco."""
+    now = datetime.now(tz=timezone.utc)
+    action = MitigationActionModel(
+        organization_id=current_user.organization_id,
+        risk_theme=payload.risk_theme,
+        territory=payload.territory.strip(),
+        title=payload.title.strip(),
+        description=payload.description.strip(),
+        responsible_role=payload.responsible_role.strip(),
+        action_type=payload.action_type,
+        priority=payload.priority,
+        status="planejada",
+        progress_pct=0,
+        deadline_utc=payload.deadline_utc,
+        estimated_cost_brl=payload.estimated_cost_brl,
+        indicator=payload.indicator,
+        notes=payload.notes,
+        created_by=current_user.email,
+        updated_by=current_user.email,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(action)
+    db.flush()
+    audit_service.create_event(
+        db=db,
+        module="planning",
+        action="mitigation.action_created",
+        actor=current_user.email,
+        organization_id=current_user.organization_id,
+        resource_type="mitigation_action",
+        resource_id=action.action_id,
+    )
+    db.commit()
+    db.refresh(action)
+    return MitigationActionOut.model_validate(action)
+
+
+@router.get("/mitigation/actions", response_model=list[MitigationActionOut])
+def list_mitigation_actions(
+    status_filter: str | None = Query(default=None, alias="status"),
+    risk_theme: str | None = Query(default=None),
+    current_user: CurrentUser = Depends(
+        require_roles("admin_general", "operator", "analyst", "auditor")
+    ),
+    db: Session = Depends(get_db),
+) -> list[MitigationActionOut]:
+    from sqlalchemy import select
+
+    stmt = select(MitigationActionModel).where(
+        MitigationActionModel.organization_id == current_user.organization_id
+    )
+    if status_filter:
+        stmt = stmt.where(MitigationActionModel.status == status_filter)
+    if risk_theme:
+        stmt = stmt.where(MitigationActionModel.risk_theme == risk_theme)
+    stmt = stmt.order_by(MitigationActionModel.created_at.desc())
+    return [MitigationActionOut.model_validate(item) for item in db.scalars(stmt).all()]
+
+
+@router.patch("/mitigation/actions/{action_id}", response_model=MitigationActionOut)
+def update_mitigation_action(
+    action_id: str,
+    payload: MitigationActionUpdate,
+    current_user: CurrentUser = Depends(require_roles("admin_general", "operator")),
+    db: Session = Depends(get_db),
+) -> MitigationActionOut:
+    action = db.get(MitigationActionModel, action_id)
+    if action is None or action.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=404, detail="Ação de mitigação não encontrada.")
+    now = datetime.now(tz=timezone.utc)
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(action, field, value)
+    if updates.get("status") == "concluida":
+        action.progress_pct = 100
+        if action.completed_at_utc is None:
+            action.completed_at_utc = now
+    action.updated_by = current_user.email
+    action.updated_at = now
+    audit_service.create_event(
+        db=db,
+        module="planning",
+        action="mitigation.action_updated",
+        actor=current_user.email,
+        organization_id=current_user.organization_id,
+        resource_type="mitigation_action",
+        resource_id=action.action_id,
+    )
+    db.commit()
+    db.refresh(action)
+    return MitigationActionOut.model_validate(action)
 
 
 # ----------------------- Decisões do Gabinete -----------------------

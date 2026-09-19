@@ -6,6 +6,9 @@ __pycache__/
 .mypy_cache/
 .venv/
 venv/
+*.egg-info/
+.coverage
+htmlcov/
 
 # Node
 node_modules/
@@ -17,6 +20,11 @@ build/
 *.log
 *.db
 *.db.bak-*
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # Environment
 .env
@@ -24,11 +32,31 @@ build/
 !.env.example
 !.env.prod.example
 
+# Secrets / credenciais
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+credentials.json
+service-account*.json
+secrets/
+
+# Modelos de ML (usar DVC/Git LFS se precisar versionar)
+*.pkl
+*.joblib
+*.h5
+*.onnx
+
 # OS / Editor
 .DS_Store
 Thumbs.db
+desktop.ini
 .idea/
 .vscode/
+~$*.docx
+~$*.xlsx
+~$*.pptx
 
 # Data volumes
 data/raw/

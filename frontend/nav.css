@@ -8,6 +8,7 @@
 .module-pills{display:flex;flex-wrap:wrap;gap:8px}
 .module-pills a{padding:5px 11px;border:1px solid #b7d6cf;border-radius:999px;font-size:.8rem;font-weight:700;color:#075c67;text-decoration:none;background:#fff}
 .module-pills a:hover{background:#e8f3f0}
+.module-pill-disabled{padding:5px 11px;border:1px dashed #cbd5d1;border-radius:999px;font-size:.8rem;font-weight:600;color:#94a3a0;background:#f8fafa;cursor:help}
 
 /* Cartões de condições atuais */
 .current-conditions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:10px 0}
@@ -43,9 +44,113 @@
 .priority-media a{border-left:5px solid #f59e0b}
 .priority-ok{padding:11px 14px;border-radius:9px;background:#ecfdf3;border:1px solid #bbe7c9;color:#166534;font-weight:600}
 .deadline-overdue{color:#b91c1c;font-weight:800}
+
+/* Banner Eco-Gestão Municipal */
+.eco-hero{background:linear-gradient(135deg,#0b3d91 0%,#075c67 55%,#16803c 100%);color:#fff;border-radius:16px;padding:clamp(1.3rem,3vw,2.2rem);margin:14px 0 20px;box-shadow:0 12px 34px #073b4c33}
+.eco-brand{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.eco-logo{width:86px;height:86px;object-fit:contain;background:#fff;border-radius:14px;padding:6px;flex-shrink:0}
+.eco-hero .eyebrow{color:#b9f1ea;margin:0}
+.eco-hero h1{margin:.2rem 0 .5rem;font-size:clamp(1.3rem,2.6vw,1.9rem);color:#fff;line-height:1.25}
+.eco-sub{margin:0;max-width:62ch;color:#e4f5f1;font-size:.95rem}
+.eco-quick{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.eco-quick a{padding:9px 16px;border-radius:999px;background:#ffffff1f;border:1px solid #ffffff59;color:#fff;font-weight:700;font-size:.85rem;text-decoration:none}
+.eco-quick a:hover{background:#fff;color:#075c67}
+@media(max-width:600px){.eco-logo{width:64px;height:64px}}
+
+/* Previsão diária do cidadão (padrão de leitura CPTEC) */
+.daily-forecast{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0}
+.day-card{background:#fff;border:1px solid #d9ebe6;border-radius:14px;padding:16px 18px;box-shadow:0 4px 16px #073b4c0f}
+.day-card.destaque{background:linear-gradient(160deg,#075c67,#0e7490);color:#fff;border-color:#075c67}
+.day-card.destaque .day-condition,.day-card.destaque .day-details span,.day-card.destaque .day-advice{color:#d8f3ef}
+.day-card.destaque .day-details strong,.day-card.destaque .tmin,.day-card.destaque .tmax{color:#fff}
+/* O cartão em destaque tem fundo escuro: cabeçalho e ícone precisam ser claros. */
+.day-card.destaque header,.day-card.destaque header strong,.day-card.destaque .day-icon{color:#fff;background:transparent}
+.day-card header{display:flex;justify-content:space-between;align-items:center;font-size:1rem;background:transparent;color:inherit}
+.day-icon{font-size:1.9rem;line-height:1}
+.day-condition{margin:.35rem 0 .6rem;font-size:.9rem;color:#5a7a80}
+.day-temps{display:flex;align-items:baseline;gap:10px;margin:0 0 .7rem}
+.tmax{font-size:2.1rem;font-weight:800;line-height:1}
+.tmin{font-size:1.15rem;font-weight:700;color:#5a7a80}
+.day-details{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:.85rem}
+.day-details li{display:flex;justify-content:space-between;gap:10px}
+.day-details span{color:#5a7a80}
+.day-card.chuva-media{border-left:5px solid #0ea5e9}
+.day-card.chuva-alta{border-left:5px solid #1d4ed8}
+.day-advice{margin:.6rem 0 0;font-size:.78rem;color:#8a6d3b}
+.day-card{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.day-card:hover,.day-card:focus-visible{transform:translateY(-3px);box-shadow:0 10px 26px #073b4c26;outline:none}
+.day-card:focus-visible{outline:3px solid #087e8b;outline-offset:3px}
+.sky-icon{width:46px;height:46px;flex-shrink:0}
+.day-more{margin:.6rem 0 0;font-size:.78rem;font-weight:700;color:#087e8b}
+.day-card.destaque .day-more{color:#b9f1ea}
+
+/* Detalhamento hora a hora do dia escolhido */
+.hourly-detail{background:#fff;border:1px solid #d9ebe6;border-radius:12px;padding:14px 16px;margin:4px 0 14px}
+.hourly-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.hourly-head button{padding:5px 12px;border:1px solid #cbd5d1;border-radius:7px;background:#f6faf9;font:inherit;font-size:.8rem;font-weight:700;color:#5a7a80;cursor:pointer}
+.hourly-table-wrap{overflow-x:auto}
+.hourly-table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:460px}
+.hourly-table th{background:#e8f3f0;color:#31535a;text-align:left;padding:7px 10px;font-size:.75rem;text-transform:uppercase;letter-spacing:.02em}
+.hourly-table td{padding:6px 10px;border-top:1px solid #edf5f2}
+.hourly-table tbody tr:hover{background:#f6faf9}
+.hourly-details{margin-top:12px}
+@media(max-width:640px){.daily-forecast{grid-template-columns:1fr}}
+
+/* Operações — saúde das fontes */
+.sources-health{display:grid;gap:8px;margin:10px 0}
+.source-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#fff;border:1px solid #d9ebe6;border-left:5px solid var(--state);border-radius:8px;padding:9px 12px;font-size:.88rem}
+.source-row small{color:#5a7a80}
+.source-state{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--state)}
+.source-error{grid-column:1/-1;margin:.4rem 0 0;font-size:.78rem;color:#b91c1c;background:#fef2f2;border-radius:6px;padding:5px 8px}
+.sources-summary{margin:0 0 8px;font-weight:700;font-size:.9rem}
+.sources-summary.ok{color:#166534}
+.sources-summary.alerta{color:#b45309}
+.sources-ok summary{cursor:pointer;font-size:.85rem;font-weight:700;color:#5a7a80;padding:6px 0}
+.source-actions{grid-column:1/-1;display:flex;gap:8px;margin-top:.5rem}
+.source-actions button{padding:5px 11px;border:1px solid #087e8b;border-radius:7px;background:#075c67;color:#fff;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
+.source-actions button.ghost{background:#fff;color:#5a7a80;border-color:#cbd5d1}
+.source-actions button:disabled{opacity:.6;cursor:progress}
+.sources-ok .source-row{margin-top:6px}
+@media(max-width:640px){.source-row{grid-template-columns:1fr}}
+
+/* Decisões do Gabinete */
+.cabinet-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.cabinet-form label{display:grid;gap:5px;font-size:.85rem;font-weight:700;color:#31535a}
+.cabinet-form .field-wide{grid-column:1/-1}
+.cabinet-form textarea{padding:9px;border:1px solid #b7d6cf;border-radius:7px;font:inherit;resize:vertical}
+.cabinet-filters{display:flex;gap:14px;margin:10px 0;font-size:.85rem;font-weight:700;color:#31535a}
+.cabinet-list{display:grid;gap:10px}
+.cabinet-card{background:#fff;border:1px solid #d9ebe6;border-left:5px solid #0f766e;border-radius:9px;padding:12px 14px}
+.cabinet-card.overdue{border-left-color:#b91c1c;background:#fef7f7}
+.cabinet-card header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:.4rem}
+.cabinet-status{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--status);border:1px solid var(--status);border-radius:999px;padding:2px 9px}
+.cabinet-action{font-size:.88rem;color:#31535a}
+.cabinet-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:.6rem}
+.cabinet-actions button{padding:6px 12px;border:1px solid #087e8b;border-radius:7px;background:#075c67;color:#fff;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+.cabinet-actions button.ghost{background:#fff;color:#5a7a80;border-color:#cbd5d1}
+@media(max-width:640px){.cabinet-form{grid-template-columns:1fr}}
 .runs-details{margin:16px 0}
 .runs-details summary{cursor:pointer;font-weight:700;color:#5a7a80;font-size:.86rem}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* Pontos de monitoramento no mapa */
+.monitoring-marker span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;border:3px solid #075c67;font-size:15px;font-weight:800;color:#075c67;box-shadow:0 2px 8px #073b4c33}
+.monitoring-fluviometrica span{border-color:#0e7490;color:#0e7490}
+.monitoring-modelo span{border-color:#7c3aed;color:#7c3aed}
+.monitoring-rising span{border-color:#b91c1c;color:#b91c1c;animation:pulse-rising 1.6s ease-in-out infinite}
+@keyframes pulse-rising{50%{box-shadow:0 0 0 8px #b91c1c22}}
+.monitoring-popup{min-width:220px}
+.popup-block{margin:.5rem 0;padding:.45rem .6rem;background:#f2f7f5;border-radius:6px}
+.popup-table{width:100%;border-collapse:collapse;margin:.4rem 0;font-size:.84rem}
+.popup-table td{padding:2px 0;border-top:1px solid #edf5f2}
+
+/* Formulário de denúncia do cidadão */
+.citizen-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.citizen-form label{display:grid;gap:5px;font-size:.85rem;font-weight:700;color:#31535a}
+.citizen-form .field-wide{grid-column:1/-1}
+.citizen-form textarea{padding:9px;border:1px solid #b7d6cf;border-radius:7px;font:inherit;resize:vertical}
+.report-disclaimer{background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;color:#78350f}
+@media(max-width:640px){.citizen-form{grid-template-columns:1fr}}
 
 /* Links de dados abertos */
 .open-data-links article a{word-break:break-all}
@@ -60,5 +165,50 @@
 .territory-label span{display:inline-block;transform:translate(-50%,-50%);background:#fffffff0;border:1px solid #b7d6cf;border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:800;color:#073b4c;white-space:nowrap;box-shadow:0 2px 8px #073b4c22}
 
 .module-soon{display:block;margin-top:.4rem;font-size:.82rem;color:#8a6d3b}
+
+/* Botão de acesso ao painel (era link azul sublinhado) */
+.module-route{display:inline-block;margin-top:.6rem;padding:7px 14px;border-radius:8px;background:#075c67;color:#fff;font-size:.82rem;font-weight:700;text-decoration:none;border:1px solid #087e8b}
+.module-route:hover{background:#0e7490}
+#module-workspace article{background:#fff;border:1px solid #d9ebe6;border-radius:10px;padding:14px 16px;margin-bottom:10px}
+#module-workspace h3{margin:0 0 .3rem;font-size:1rem;color:#073b4c}
+
+/* Navegação em foco: um painel por vez */
+.panel-focus-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#073b4c;color:#fff;border-radius:10px;padding:9px 14px;margin:12px 0}
+.panel-focus-bar button{padding:6px 13px;border:1px solid #ffffff59;border-radius:7px;background:#ffffff1f;color:#fff;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer}
+.panel-focus-bar button:hover{background:#fff;color:#073b4c}
+.panel-focus-bar strong{font-size:.95rem;margin-left:4px}
+.focus-hint{margin-left:auto;font-size:.75rem;color:#b9f1ea}
+.panel-hidden-by-focus{display:none !important}
+#operacao.focus-mode #module-workspace{display:none}
+@media(max-width:600px){.focus-hint{display:none}}
+
+/* Controle de intensidade das camadas de imagem */
+.opacity-control{display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;color:#31535a}
+.opacity-control input[type="range"]{width:110px;accent-color:#075c67}
+
+/* Idade das imagens de satélite/radar */
+.imagery-state{margin:.4rem 0 0;font-size:.8rem;color:#5a7a80}
+.imagery-state.stale,.stale-warning{color:#b45309;font-weight:700;background:#fffbeb;border:1px solid #fcd34d;border-radius:7px;padding:6px 10px}
+
+/* Planejamento e mitigação */
+.mitigation-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0}
+.mitigation-summary article{background:#f6faf9;border:1px solid #d9ebe6;border-radius:9px;padding:11px 14px;display:grid;gap:3px}
+.mitigation-summary strong{font-size:1.4rem;color:#073b4c}
+.mitigation-summary span{font-size:.78rem;color:#5a7a80;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+
+/* Saúde ambiental */
+.health-indicators{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:12px 0}
+.health-card{background:#fff;border:1px solid #d9ebe6;border-top:5px solid var(--nivel);border-radius:10px;padding:13px 15px}
+.health-card-title{margin:0;font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:#5a7a80}
+.health-value{margin:.3rem 0;font-size:2rem;font-weight:800;color:#073b4c;line-height:1}
+.health-value span{font-size:.9rem;font-weight:700;color:#5a7a80;margin-left:4px}
+.health-level{margin:0;font-weight:800;font-size:.9rem;color:var(--nivel)}
+.health-extra{margin:.4rem 0 0;font-size:.78rem;color:#5a7a80}
+.health-reference{margin:.5rem 0 0;font-size:.72rem;color:#087e8b;cursor:help}
+.health-columns{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:12px}
+.health-columns h4{margin:0 0 .5rem;font-size:.92rem;color:#073b4c}
+.health-actions p{margin:0 0 .6rem;padding:9px 12px;background:#f6faf9;border-left:4px solid #087e8b;border-radius:6px;font-size:.86rem}
+.health-groups{margin:0;padding-left:1.1rem;font-size:.86rem;color:#31535a}
+@media(max-width:720px){.health-columns{grid-template-columns:1fr}}
 
 @media(max-width:640px){.route-tabs{gap:4px}.route-tabs a{padding:7px 10px;font-size:.82rem}}
