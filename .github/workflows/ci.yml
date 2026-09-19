@@ -2,14 +2,23 @@ name: backend-ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 permissions:
   contents: read
 
+# Cancela execuções superadas do mesmo branch/PR em vez de deixá-las
+# queimando minutos até o fim.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   secrets-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,6 +30,7 @@ jobs:
 
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgis/postgis:16-3.4
@@ -53,6 +63,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
+          # Mesma minor da imagem de produção (backend/Dockerfile).
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
@@ -84,4 +95,18 @@ jobs:
 
       - name: Automated tests
         working-directory: backend
-        run: pytest -q
+        # --strict-markers pega marker digitado errado; o código de saída 5
+        # (nenhum teste coletado) passa a falhar o job.
+        run: pytest -q --strict-markers
+
+  docker-build:
+    # Só faz sentido gastar o build se a suíte passou.
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build da imagem do backend
+        # Contexto é a raiz do repositório: o Dockerfile faz COPY backend/ e
+        # COPY frontend/, então buildar de dentro de backend/ quebraria.
+        run: docker build -f backend/Dockerfile -t meteoro-backend:ci .
